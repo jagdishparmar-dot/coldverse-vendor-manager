@@ -6,7 +6,9 @@ WORKDIR /app
 
 FROM base AS deps
 COPY package.json package-lock.json ./
-RUN npm ci
+# Skip native module build scripts (better-sqlite3 from @better-auth/cli — not used at runtime).
+# Prisma client is generated explicitly in the builder stage.
+RUN npm ci --ignore-scripts
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules

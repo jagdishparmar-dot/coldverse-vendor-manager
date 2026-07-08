@@ -26,6 +26,7 @@ coverage
 .turbo
 *.log
 .tmp-*
+public/deployment-log.txt
 
 # OS
 .DS_Store
