@@ -1,36 +1,171 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Next.js Vendor Billing App
 
-## Getting Started
+Next.js migration of the vendor billing management app with PostgreSQL (Prisma) and S3-compatible invoice storage.
 
-First, run the development server:
+## Prerequisites
+
+- Node.js 20+
+- PostgreSQL database
+- S3-compatible storage (AWS S3, RustFS, MinIO, Cloudflare R2, etc.)
+
+## RustFS / self-hosted S3 setup
+
+This app uses the AWS SDK with settings recommended for [RustFS](https://docs.rustfs.com/developer/sdk/javascript.html):
+
+| Setting | Value |
+|---------|--------|
+| `S3_ENDPOINT` | Your RustFS API URL, e.g. `http://localhost:9000` or `https://s3.example.com` |
+| `S3_REGION` | Any value (RustFS does not validate), e.g. `us-east-1` |
+| `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | RustFS credentials |
+| `S3_BUCKET` or `S3_BUCKET_NAME` | Bucket name for invoices |
+| `S3_FORCE_PATH_STYLE` | Auto-enabled for non-AWS endpoints (required for RustFS) |
+| `S3_TLS_REJECT_UNAUTHORIZED` | Set to `false` if using HTTPS with a self-signed certificate |
+
+Example `.env` for local RustFS:
+
+```env
+S3_ENDPOINT="http://localhost:9000"
+S3_REGION="us-east-1"
+S3_ACCESS_KEY_ID="rustfsadmin"
+S3_SECRET_ACCESS_KEY="rustfssecret"
+S3_BUCKET="coldverse-invoices"
+```
+
+Example for HTTPS with a private/self-signed cert (like a hosted RustFS gateway):
+
+```env
+S3_ENDPOINT="https://s3.intoship.cloud"
+S3_REGION="us-east-1"
+S3_ACCESS_KEY_ID="your-key"
+S3_SECRET_ACCESS_KEY="your-secret"
+S3_BUCKET_NAME="coldverse-invoices"
+S3_TLS_REJECT_UNAUTHORIZED="false"
+```
+
+Create the bucket in RustFS before uploading invoices (via console on port 9001 or `aws s3 mb`).
+
+## Setup
+
+1. Copy environment variables:
+
+```bash
+cp .env.example .env
+```
+
+2. Configure `DATABASE_URL`, S3 variables, and auth variables in `.env`:
+
+```env
+BETTER_AUTH_SECRET=""          # openssl rand -base64 32
+BETTER_AUTH_URL="http://localhost:3000"
+SEED_ADMIN_EMAIL="admin@coldverse.com"
+SEED_ADMIN_PASSWORD="ChangeMe123!"
+SEED_ADMIN_NAME="Coldverse Admin"
+```
+
+3. Apply database schema:
+
+```bash
+npm run db:migrate
+# or for quick local setup without migration history:
+npm run db:push
+```
+
+4. Seed default data (requires S3 credentials):
+
+```bash
+npm run db:seed
+```
+
+5. Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Admin authentication
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The admin console requires email/password login via [better-auth](https://www.better-auth.com). The vendor portal (`/?token=<vendorToken>`) remains public with the existing OTP flow.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Login:** `/login`
+- **Profile & password:** `/profile`
+- **User management (admin role only):** `/users`
 
-## Learn More
+After running `npm run db:seed`, sign in with the credentials from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in your `.env` (default dev: `admin@coldverse.com` / `ChangeMe123!`). Change the password after first login.
 
-To learn more about Next.js, take a look at the following resources:
+From the repository root, you can also run:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run dev:next
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## API
 
-## Deploy on Vercel
+All endpoints match the legacy Express app under `/api/*`:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Vendors, invoices, hubs, categories, stats, archive
+- Vendor portal OTP flow (`/?token=<vendorToken>`)
+- Invoice upload (base64 JSON) and S3-backed download/view
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## UI components
+
+Form dropdowns and date fields use [shadcn/ui](https://ui.shadcn.com) wrapped in Coldverse-themed components:
+
+- `src/components/coldverse-select.tsx` — styled Select (violet/orange focus variants)
+- `src/components/coldverse-date-field.tsx` — Popover + Calendar date picker
+
+shadcn primitives live in `components/ui/`. Theme tokens in `app/globals.css` map to Coldverse violet (`#1a4294`).
+
+## Legacy App
+
+The original Vite + Express app remains in the repository root for reference (`server.ts`, `src/`).
+
+## Docker / Coolify deployment
+
+Build and run from the `next-app/` directory (set this as the **build context** in Coolify).
+
+### Build
+
+```bash
+cd next-app
+docker build -t coldverse-vendors .
+```
+
+### Run (example)
+
+```bash
+docker run -p 3000:3000 \
+  -e DATABASE_URL="postgresql://user:pass@host:5432/cldv_vendors" \
+  -e BETTER_AUTH_SECRET="your-secret" \
+  -e BETTER_AUTH_URL="https://vendors.yourdomain.com" \
+  -e S3_ENDPOINT="https://s3.example.com" \
+  -e S3_ACCESS_KEY_ID="..." \
+  -e S3_SECRET_ACCESS_KEY="..." \
+  -e S3_BUCKET_NAME="coldverse-invoices" \
+  -e RUN_DB_MIGRATIONS=true \
+  -e SEED_ADMIN_ON_STARTUP=true \
+  -e SEED_ADMIN_EMAIL="admin@coldverse.com" \
+  -e SEED_ADMIN_PASSWORD="ChangeMe123!" \
+  coldverse-vendors
+```
+
+### Startup environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RUN_DB_MIGRATIONS` | `true` | Run `prisma migrate deploy` before starting the app |
+| `SEED_ADMIN_ON_STARTUP` | `false` | Create bootstrap admin if no users exist (requires `SEED_ADMIN_*`) |
+| `PORT` | `3000` | HTTP port (Coolify usually sets this automatically) |
+| `HOSTNAME` | `0.0.0.0` | Bind address for Next.js |
+
+Set `RUN_DB_MIGRATIONS=false` after the first deploy if you prefer to run migrations manually.
+
+Set `SEED_ADMIN_ON_STARTUP=true` on the **first deploy only**, then turn it off. The seed is idempotent (skips if any user already exists).
+
+### Coolify checklist
+
+1. **Build context / Dockerfile path:** `next-app` / `Dockerfile`
+2. **Port:** expose `3000`
+3. **Database:** attach PostgreSQL; set `DATABASE_URL`
+4. **Required env:** `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (your public app URL), S3 variables
+5. **First deploy:** `RUN_DB_MIGRATIONS=true`, `SEED_ADMIN_ON_STARTUP=true`, plus `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`
+6. **Subsequent deploys:** keep `RUN_DB_MIGRATIONS=true` (or disable if you manage migrations separately); set `SEED_ADMIN_ON_STARTUP=false`
