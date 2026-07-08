@@ -33,6 +33,7 @@ type ColdverseSelectProps = {
   onValueChange: (value: string) => void;
   options: ColdverseSelectOption[];
   placeholder?: string;
+  selectedLabel?: string;
   disabled?: boolean;
   variant?: ColdverseSelectVariant;
   className?: string;
@@ -43,10 +44,16 @@ export function ColdverseSelect({
   onValueChange,
   options,
   placeholder,
+  selectedLabel,
   disabled,
   variant = "default",
   className,
 }: ColdverseSelectProps) {
+  const displayLabel =
+    selectedLabel ??
+    options.find((option) => option.value === value)?.label ??
+    placeholder;
+
   return (
     <Select
       value={value}
@@ -57,7 +64,7 @@ export function ColdverseSelect({
         className={cn(triggerVariants[variant], className)}
         size="default"
       >
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={placeholder}>{displayLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent className="rounded-xl border border-gray-200 shadow-lg">
         {options.map((option) => (

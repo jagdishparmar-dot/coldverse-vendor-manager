@@ -43,6 +43,7 @@ import { exportInvoicesToExcel, exportVendorsToExcel } from "./utils/excelExport
 import { ColdverseSelect } from "@/src/components/coldverse-select";
 import { ColdverseDateField } from "@/src/components/coldverse-date-field";
 import { UserMenu } from "@/src/components/UserMenu";
+import { AdminRefreshControl } from "@/src/components/AdminRefreshControl";
 import { useSession } from "@/lib/auth-client";
 
 const MONTH_FILTER_OPTIONS = [
@@ -114,6 +115,7 @@ export default function App() {
   const [selectedVendorId, setSelectedVendorId] = useState("All");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedDate, setSelectedDate] = useState("");
+  const [headerHubFilter, setHeaderHubFilter] = useState("All");
   
   // Copying notification states
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
@@ -1203,8 +1205,38 @@ export default function App() {
     }).format(val);
   };
 
+  const matchesHeaderHubInvoice = (inv: Invoice) =>
+    headerHubFilter === "All" || inv.hubId === headerHubFilter;
+
+  const matchesHeaderHubVendor = (v: Vendor) => {
+    if (headerHubFilter === "All") return true;
+    if (v.hubs?.includes(headerHubFilter)) return true;
+    return invoices.some(
+      (inv) =>
+        !inv.archived &&
+        inv.vendorId === v.id &&
+        inv.hubId === headerHubFilter
+    );
+  };
+
+  const hubFilteredVendors = vendors.filter(matchesHeaderHubVendor);
+  const hubScopedInvoices = invoices.filter(matchesHeaderHubInvoice);
+
+  const headerHubOptions = [
+    { value: "All", label: "All Hubs" },
+    ...hubs.map((hub) => ({
+      value: hub.id,
+      label: `${hub.name} (${hub.code})`,
+    })),
+  ];
+
+  const headerHubSelectedLabel =
+    headerHubFilter === "All"
+      ? "All Hubs"
+      : hubs.find((hub) => hub.id === headerHubFilter)?.name ?? "All Hubs";
+
   // Filter vendor list
-  const filteredVendors = vendors.filter((v) => {
+  const filteredVendors = hubFilteredVendors.filter((v) => {
     const query = vendorSearch.toLowerCase();
     return (
       v.name.toLowerCase().includes(query) ||
@@ -1242,7 +1274,9 @@ export default function App() {
       matchesDate = inv.date === selectedDate;
     }
 
-    return matchesSearch && matchesCategory && matchesVendor && matchesMonth && matchesDate;
+    const matchesHub = matchesHeaderHubInvoice(inv);
+
+    return matchesSearch && matchesCategory && matchesVendor && matchesMonth && matchesDate && matchesHub;
   });
 
   // Apply status filter for final list
@@ -1259,7 +1293,7 @@ export default function App() {
     if (!statsData) return null;
     
     // We compute dynamic statistics based on our current filteredInvoices
-    const totalVendorsCount = vendors.length;
+    const totalVendorsCount = hubFilteredVendors.length;
     const totalInvoicesCount = filteredInvoices.length;
     const totalAmountSum = filteredInvoices.reduce((sum, inv) => sum + inv.amount, 0);
 
@@ -1284,7 +1318,7 @@ export default function App() {
 
     // Vendors Breakdown
     const vendorStatsMap: Record<string, { name: string; count: number; total: number }> = {};
-    vendors.forEach(v => {
+    hubFilteredVendors.forEach(v => {
       vendorStatsMap[v.id] = { name: v.name, count: 0, total: 0 };
     });
     filteredInvoices.forEach(inv => {
@@ -1337,7 +1371,8 @@ export default function App() {
     const trendInvoices = invoices.filter(inv => {
       const matchesCategory = invoiceCategoryFilter === "All" || inv.category === invoiceCategoryFilter;
       const matchesVendor = selectedVendorId === "All" || inv.vendorId === selectedVendorId;
-      return matchesCategory && matchesVendor;
+      const matchesHub = matchesHeaderHubInvoice(inv);
+      return matchesCategory && matchesVendor && matchesHub;
     });
 
     const monthsMap: Record<string, { monthKey: string; label: string; count: number; total: number; sortKey: string }> = {};
@@ -2252,48 +2287,32 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Auto Refresh Toggle & Status Badge */}
-            <button
-              onClick={() => {
+            {/* Hub filter */}
+            <div className="flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-slate-400 hidden sm:block shrink-0" />
+              <ColdverseSelect
+                value={headerHubFilter}
+                onValueChange={setHeaderHubFilter}
+                options={headerHubOptions}
+                selectedLabel={headerHubSelectedLabel}
+                placeholder="All Hubs"
+                variant="inline"
+                className="min-w-[130px] sm:min-w-[180px]"
+              />
+            </div>
+
+            <AdminRefreshControl
+              isAutoRefreshEnabled={isAutoRefreshEnabled}
+              autoRefreshCountdown={autoRefreshCountdown}
+              adminLoading={adminLoading}
+              onRefresh={fetchAdminData}
+              onToggleAutoRefresh={() => {
                 setIsAutoRefreshEnabled(!isAutoRefreshEnabled);
                 if (!isAutoRefreshEnabled) {
                   setAutoRefreshCountdown(120);
                 }
               }}
-              className={`flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer shadow-sm select-none ${
-                isAutoRefreshEnabled
-                  ? "bg-orange-50/80 border-orange-100 text-orange-700 hover:bg-orange-100/50"
-                  : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
-              }`}
-              title={isAutoRefreshEnabled ? "Pause auto-refresh (2 min)" : "Enable auto-refresh (2 min)"}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${isAutoRefreshEnabled ? "bg-orange-500 animate-pulse" : "bg-slate-400"}`} />
-              <span>
-                {isAutoRefreshEnabled ? `Auto: ${autoRefreshCountdown}s` : "Auto: Off"}
-              </span>
-            </button>
-
-            {/* Refresh Button */}
-            <button
-              onClick={fetchAdminData}
-              disabled={adminLoading}
-              className="flex items-center gap-1.5 text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 hover:text-orange-600 px-3 py-1.5 rounded-xl border border-gray-200 hover:border-orange-200 shadow-sm transition-all cursor-pointer disabled:opacity-50 active:scale-95"
-              title="Refresh Console Data"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-slate-500 hover:text-orange-600 transition-colors ${adminLoading ? "animate-spin text-orange-600" : ""}`} />
-              <span>{adminLoading ? "Refreshing..." : "Refresh"}</span>
-            </button>
-
-            {/* Quick Stats Header indicator */}
-            <div className="hidden sm:flex items-center gap-3 text-xs bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="font-medium text-gray-500">
-                System Active
-              </span>
-            </div>
+            />
 
             {session?.user && (
               <div className="pl-2 border-l border-gray-200">
@@ -2313,6 +2332,7 @@ export default function App() {
         
         {/* Navigation Tabs and Quick Actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200/80 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0">
           <div className="flex bg-gray-100 p-1 rounded-xl overflow-x-auto whitespace-nowrap flex-nowrap max-w-full gap-1 no-scrollbar scrollbar-none">
             <button
               onClick={() => setActiveTab("dashboard")}
@@ -2364,6 +2384,13 @@ export default function App() {
             >
               Remarks Summary
             </button>
+          </div>
+          {headerHubFilter !== "All" && (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100 shrink-0">
+              <Building2 className="w-3 h-3" />
+              {hubs.find((h) => h.id === headerHubFilter)?.name || "Selected Hub"}
+            </span>
+          )}
           </div>
         </div>
 
@@ -2738,11 +2765,13 @@ export default function App() {
 
         {/* Tab 2: Vendor List View */}
         {activeTab === "vendors" && (() => {
-          // Calculate Vendor KPIs
-          const totalVendorsCount = vendors.length;
-          const gstRegisteredCount = vendors.filter(v => v.gstNumber && v.gstNumber.trim()).length;
-          const uniqueStatesCount = new Set(vendors.flatMap(v => v.states || (v.state ? [v.state] : []))).size;
-          const uniqueHubsCount = new Set(vendors.flatMap(v => v.hubs || [])).size;
+          // Calculate Vendor KPIs (scoped to selected hub)
+          const totalVendorsCount = hubFilteredVendors.length;
+          const gstRegisteredCount = hubFilteredVendors.filter(v => v.gstNumber && v.gstNumber.trim()).length;
+          const uniqueStatesCount = new Set(hubFilteredVendors.flatMap(v => v.states || (v.state ? [v.state] : []))).size;
+          const uniqueHubsCount = headerHubFilter === "All"
+            ? new Set(hubFilteredVendors.flatMap(v => v.hubs || [])).size
+            : 1;
 
           const colorsList = [
             { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-150", accent: "bg-orange-500", light: "bg-orange-500/10", tagBg: "bg-orange-50 text-orange-700 border-orange-100" },
@@ -2919,7 +2948,7 @@ export default function App() {
                       Export to Excel
                     </button>
                     <div className="text-[11px] text-gray-400 font-medium">
-                      Showing {filteredVendors.length} of {vendors.length} vendors
+                      Showing {filteredVendors.length} of {hubFilteredVendors.length} vendors
                     </div>
                   </div>
                 </div>
@@ -3304,7 +3333,7 @@ export default function App() {
                   Export to Excel
                 </button>
                 <div className="text-[11px] text-gray-400 font-medium whitespace-nowrap">
-                  Showing {filteredInvoices.length} of {invoices.length} invoices
+                  Showing {filteredInvoices.length} of {hubScopedInvoices.length} invoices
                 </div>
               </div>
             </div>
@@ -3453,7 +3482,12 @@ export default function App() {
 
         {/* Tab: Remarks & Summary Highlight Hub */}
         {activeTab === "remarks" && (() => {
-          const invoicesWithRemarks = invoices.filter(inv => inv.remarks && inv.remarks.trim().length > 0 && !inv.archived);
+          const invoicesWithRemarks = invoices.filter(inv =>
+            inv.remarks &&
+            inv.remarks.trim().length > 0 &&
+            !inv.archived &&
+            matchesHeaderHubInvoice(inv)
+          );
           
           // Filter by search
           const filteredRemarksList = invoicesWithRemarks.filter(inv => {

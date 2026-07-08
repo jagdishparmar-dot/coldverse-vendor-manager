@@ -1,0 +1,373 @@
+2026-Jul-08 14:53:38.040650 Docker 29.6.1 with BuildKit and Buildx detected on deployment server (localhost).
+2026-Jul-08 14:53:38.048235 Starting deployment of jagdishparmar-dot/coldverse-vendor-manager:main to localhost.
+2026-Jul-08 14:53:38.323999 Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.14
+2026-Jul-08 14:53:38.438263 [DEBUG] [CMD]: docker stop --time=30 blt2siq6eqkjfhnrwnisx1ca
+2026-Jul-08 14:53:38.438263 [DEBUG] Flag --time has been deprecated, use --timeout instead
+2026-Jul-08 14:53:38.440435 [DEBUG] Error response from daemon: No such container: blt2siq6eqkjfhnrwnisx1ca
+2026-Jul-08 14:53:38.557889 [DEBUG] [CMD]: docker run -d --network 'coolify' --name blt2siq6eqkjfhnrwnisx1ca  --rm -v /root/.docker/buildx:/root/.docker/buildx -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/coollabsio/coolify-helper:1.0.14
+2026-Jul-08 14:53:38.557889 [DEBUG] Unable to find image 'ghcr.io/coollabsio/coolify-helper:1.0.14' locally
+2026-Jul-08 14:53:39.653933 [DEBUG] 1.0.14: Pulling from coollabsio/coolify-helper
+2026-Jul-08 14:53:39.910060 [DEBUG] 897d797d2723: Already exists
+2026-Jul-08 14:53:39.916946 [DEBUG] 40a51c862130: Pulling fs layer
+2026-Jul-08 14:53:39.918993 [DEBUG] ac7a419814da: Pulling fs layer
+2026-Jul-08 14:53:39.918993 [DEBUG] 2b13822e2205: Pulling fs layer
+2026-Jul-08 14:53:39.918993 [DEBUG] ce20655395cc: Pulling fs layer
+2026-Jul-08 14:53:39.918993 [DEBUG] a2ab865ad409: Pulling fs layer
+2026-Jul-08 14:53:39.918993 [DEBUG] 4f4fb700ef54: Pulling fs layer
+2026-Jul-08 14:53:39.918993 [DEBUG] 286bebeba8f4: Pulling fs layer
+2026-Jul-08 14:53:39.918993 [DEBUG] ce20655395cc: Waiting
+2026-Jul-08 14:53:39.918993 [DEBUG] 4f4fb700ef54: Waiting
+2026-Jul-08 14:53:39.918993 [DEBUG] a2ab865ad409: Waiting
+2026-Jul-08 14:53:39.918993 [DEBUG] 286bebeba8f4: Waiting
+2026-Jul-08 14:53:40.430713 [DEBUG] 2b13822e2205: Verifying Checksum
+2026-Jul-08 14:53:40.430713 [DEBUG] 2b13822e2205: Download complete
+2026-Jul-08 14:53:40.480732 [DEBUG] 40a51c862130: Download complete
+2026-Jul-08 14:53:40.504618 [DEBUG] 40a51c862130: Pull complete
+2026-Jul-08 14:53:41.073478 [DEBUG] ac7a419814da: Verifying Checksum
+2026-Jul-08 14:53:41.073478 [DEBUG] ac7a419814da: Download complete
+2026-Jul-08 14:53:41.307524 [DEBUG] 4f4fb700ef54: Download complete
+2026-Jul-08 14:53:41.314092 [DEBUG] ac7a419814da: Pull complete
+2026-Jul-08 14:53:41.330371 [DEBUG] 2b13822e2205: Pull complete
+2026-Jul-08 14:53:43.565378 [DEBUG] 286bebeba8f4: Verifying Checksum
+2026-Jul-08 14:53:43.565378 [DEBUG] 286bebeba8f4: Download complete
+2026-Jul-08 14:53:44.223462 [DEBUG] ce20655395cc: Verifying Checksum
+2026-Jul-08 14:53:44.223462 [DEBUG] ce20655395cc: Download complete
+2026-Jul-08 14:53:44.638613 [DEBUG] ce20655395cc: Pull complete
+2026-Jul-08 14:53:46.389791 [DEBUG] a2ab865ad409: Verifying Checksum
+2026-Jul-08 14:53:46.389791 [DEBUG] a2ab865ad409: Download complete
+2026-Jul-08 14:53:47.987007 [DEBUG] a2ab865ad409: Pull complete
+2026-Jul-08 14:53:48.006405 [DEBUG] 4f4fb700ef54: Pull complete
+2026-Jul-08 14:53:48.168068 [DEBUG] 286bebeba8f4: Pull complete
+2026-Jul-08 14:53:48.190933 [DEBUG] Digest: sha256:55acc11740d42a5646e74108276ab252cc040abce0679fc6b36c81b464849d52
+2026-Jul-08 14:53:48.194077 [DEBUG] Status: Downloaded newer image for ghcr.io/coollabsio/coolify-helper:1.0.14
+2026-Jul-08 14:53:48.331696 [DEBUG] 5aff234f7e409a3f359a38a8ce210b210f55e04c31dc4f2ef891f2a491718fb9
+2026-Jul-08 14:53:49.481134 [DEBUG] [CMD]: docker exec blt2siq6eqkjfhnrwnisx1ca bash -c 'GIT_SSH_COMMAND="ssh -o ConnectTimeout=30 -p 22 -o Port=22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git ls-remote '\''https://github.com/jagdishparmar-dot/coldverse-vendor-manager'\'' '\''refs/heads/main'\'''
+2026-Jul-08 14:<REDACTED>@\(.*\):#https://\1/#g" '\''/artifacts/blt2siq6eqkjfhnrwnisx1ca'\''/.gitmodules || true && git -c http.version=HTTP/1.1 submodule sync && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git -c http.version=HTTP/1.1 submodule update --init --recursive --depth=1; fi && cd '\''/artifacts/blt2siq6eqkjfhnrwnisx1ca'\'' && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git -c http.version=HTTP/1.1 lfs pull'
+2026-Jul-08 14:<REDACTED>@mo4gsc88ww0wcswkwcggco4s:5432/cldv_vendors
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG S3_ENDPOINT=https://s3.intoship.cloud
+2026-Jul-08 14:<REDACTED>@coldverse.com
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG SEED_ADMIN_PASSWORD=ChangeMe123!
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG SEED_ADMIN_NAME=Coldverse Admin
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG RUN_DB_MIGRATIONS=true
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG SEED_ADMIN_ON_STARTUP=true
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG PORT=3000
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG HOSTNAME=https://vendor-manager.intoship.cloud
+2026-Jul-08 14:<REDACTED>@mo4gsc88ww0wcswkwcggco4s:5432/cldv_vendors
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG S3_ENDPOINT=https://s3.intoship.cloud
+2026-Jul-08 14:<REDACTED>@coldverse.com
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG SEED_ADMIN_PASSWORD=ChangeMe123!
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG SEED_ADMIN_NAME=Coldverse Admin
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG RUN_DB_MIGRATIONS=true
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG SEED_ADMIN_ON_STARTUP=true
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG PORT=3000
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG HOSTNAME=https://vendor-manager.intoship.cloud
+2026-Jul-08 14:<REDACTED>@mo4gsc88ww0wcswkwcggco4s:5432/cldv_vendors
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG S3_ENDPOINT=https://s3.intoship.cloud
+2026-Jul-08 14:<REDACTED>@coldverse.com
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG SEED_ADMIN_PASSWORD=ChangeMe123!
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG SEED_ADMIN_NAME=Coldverse Admin
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG RUN_DB_MIGRATIONS=true
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG SEED_ADMIN_ON_STARTUP=true
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG PORT=3000
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG HOSTNAME=https://vendor-manager.intoship.cloud
+2026-Jul-08 14:<REDACTED>@mo4gsc88ww0wcswkwcggco4s:5432/cldv_vendors
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG S3_ENDPOINT=https://s3.intoship.cloud
+2026-Jul-08 14:<REDACTED>@coldverse.com
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG SEED_ADMIN_PASSWORD=ChangeMe123!
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG SEED_ADMIN_NAME=Coldverse Admin
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG RUN_DB_MIGRATIONS=true
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG SEED_ADMIN_ON_STARTUP=true
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG PORT=3000
+2026-Jul-08 14:53:53.784437 [DEBUG] ARG HOSTNAME=https://vendor-manager.intoship.cloud
+2026-Jul-08 14:<REDACTED>@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89
+2026-Jul-08 14:53:57.195082 [DEBUG] #3 resolve docker.io/docker/dockerfile:1@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89 done
+2026-Jul-08 14:53:57.195082 [DEBUG] #3 sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89 9.08kB / 9.08kB done
+2026-Jul-08 14:53:57.195082 [DEBUG] #3 sha256:e82bbc85c3cb06cf2a5a27b058208b43984448acbcd6a832cd1491933d4376dd 1.13kB / 1.13kB done
+2026-Jul-08 14:53:57.195082 [DEBUG] #3 sha256:1a998cca4d41cfecafb1989342c5e7378bc992589af7d47510c4b854bebfc7d7 1.33kB / 1.33kB done
+2026-Jul-08 14:53:57.195082 [DEBUG] #3 sha256:50ba52cd6a2c01eaf1a9efbedc7c75b5da5e3965c1586001c722980487a73fd7 0B / 14.36MB 0.1s
+2026-Jul-08 14:53:57.395987 [DEBUG] #3 sha256:50ba52cd6a2c01eaf1a9efbedc7c75b5da5e3965c1586001c722980487a73fd7 2.10MB / 14.36MB 0.3s
+2026-Jul-08 14:53:57.507644 [DEBUG] #3 sha256:50ba52cd6a2c01eaf1a9efbedc7c75b5da5e3965c1586001c722980487a73fd7 13.63MB / 14.36MB 0.4s
+2026-Jul-08 14:53:57.507644 [DEBUG] #3 extracting sha256:50ba52cd6a2c01eaf1a9efbedc7c75b5da5e3965c1586001c722980487a73fd7
+2026-Jul-08 14:53:57.609464 [DEBUG] #3 sha256:50ba52cd6a2c01eaf1a9efbedc7c75b5da5e3965c1586001c722980487a73fd7 14.36MB / 14.36MB 0.4s done
+2026-Jul-08 14:53:57.787980 [DEBUG] #3 extracting sha256:50ba52cd6a2c01eaf1a9efbedc7c75b5da5e3965c1586001c722980487a73fd7 0.1s done
+2026-Jul-08 14:53:57.787980 [DEBUG] #3 DONE 0.6s
+2026-Jul-08 14:53:57.787980 [DEBUG] 
+2026-Jul-08 14:53:57.787980 [DEBUG] #4 [internal] load metadata for docker.io/library/node:20-alpine
+2026-Jul-08 14:53:59.967028 [DEBUG] #4 DONE 2.2s
+2026-Jul-08 14:54:00.110511 [DEBUG] #5 [internal] load .dockerignore
+2026-Jul-08 14:54:00.110511 [DEBUG] #5 transferring context: 352B done
+2026-Jul-08 14:54:00.110511 [DEBUG] #5 DONE 0.0s
+2026-Jul-08 14:54:00.215279 [DEBUG] #6 [base 1/3] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+2026-Jul-08 14:54:00.215279 [DEBUG] #6 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.0s done
+2026-Jul-08 14:54:00.215279 [DEBUG] #6 sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 7.67kB / 7.67kB done
+2026-Jul-08 14:54:00.215279 [DEBUG] #6 sha256:afdf98210b07b586eb71fa22ba2e432e058e4cd1304d31ed60888755b8c865fb 1.72kB / 1.72kB done
+2026-Jul-08 14:54:00.215279 [DEBUG] #6 sha256:11cedc39e663e7c5d5cb9cc77a461a0d2adc25537b94e6831a6108f09cb2001b 6.52kB / 6.52kB done
+2026-Jul-08 14:54:00.342512 [DEBUG] #6 DONE 0.2s
+2026-Jul-08 14:54:00.342512 [DEBUG] 
+2026-Jul-08 14:54:00.342512 [DEBUG] #7 [internal] load build context
+2026-Jul-08 14:54:00.342512 [DEBUG] #7 transferring context: 938.96kB 0.1s done
+2026-Jul-08 14:54:00.342512 [DEBUG] #7 DONE 0.1s
+2026-Jul-08 14:54:00.490913 [DEBUG] #8 [base 2/3] RUN apk add --no-cache libc6-compat openssl
+2026-Jul-08 14:54:01.244303 [DEBUG] #8 0.906 (1/6) Upgrading libcrypto3 (3.5.6-r0 -> 3.5.7-r0)
+2026-Jul-08 14:54:01.376844 [DEBUG] #8 1.023 (2/6) Upgrading libssl3 (3.5.6-r0 -> 3.5.7-r0)
+2026-Jul-08 14:54:01.501729 [DEBUG] #8 1.054 (3/6) Installing musl-obstack (1.2.3-r2)
+2026-Jul-08 14:54:01.501729 [DEBUG] #8 1.068 (4/6) Installing libucontext (1.3.3-r0)
+2026-Jul-08 14:54:01.501729 [DEBUG] #8 1.069 (5/6) Installing gcompat (1.1.0-r4)
+2026-Jul-08 14:54:01.501729 [DEBUG] #8 1.078 (6/6) Installing openssl (3.5.7-r0)
+2026-Jul-08 14:54:01.501729 [DEBUG] #8 1.157 Executing busybox-1.37.0-r30.trigger
+2026-Jul-08 14:54:01.724617 [DEBUG] #8 1.222 OK: 11.8 MiB in 22 packages
+2026-Jul-08 14:54:02.030634 [DEBUG] #8 DONE 1.7s
+2026-Jul-08 14:54:02.193198 [DEBUG] #9 [base 3/3] WORKDIR /app
+2026-Jul-08 14:54:02.206475 [DEBUG] #9 DONE 0.2s
+2026-Jul-08 14:54:02.356012 [DEBUG] #10 [deps 1/2] COPY package.json package-lock.json ./
+2026-Jul-08 14:54:02.475126 [DEBUG] #10 DONE 0.3s
+2026-Jul-08 14:54:02.475126 [DEBUG] 
+2026-Jul-08 14:54:02.475126 [DEBUG] #11 [runner  1/14] RUN addgroup --system --gid 1001 nodejs   && adduser --system --uid 1001 nextjs
+2026-Jul-08 14:54:02.646720 [DEBUG] #11 DONE 0.4s
+2026-Jul-08 14:54:02.646720 [DEBUG] 
+2026-Jul-08 14:54:02.646720 [DEBUG] #12 [deps 2/2] RUN npm ci
+2026-Jul-08 14:54:04.985780 [DEBUG] #12 2.508 npm warn EBADENGINE Unsupported engine {
+2026-Jul-08 14:54:04.985780 [DEBUG] #12 2.508 npm warn EBADENGINE   package: '@prisma/streams-local@0.1.2',
+2026-Jul-08 14:54:04.985780 [DEBUG] #12 2.508 npm warn EBADENGINE   required: { bun: '>=1.3.6', node: '>=22.0.0' },
+2026-Jul-08 14:54:04.985780 [DEBUG] #12 2.508 npm warn EBADENGINE   current: { node: 'v20.20.2', npm: '10.8.2' }
+2026-Jul-08 14:54:04.985780 [DEBUG] #12 2.508 npm warn EBADENGINE }
+2026-Jul-08 14:54:09.998691 [DEBUG] #12 7.521 npm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error code 1
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error path /app/node_modules/better-sqlite3
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error command failed
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error command sh -c prebuild-install || node-gyp rebuild --release
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error prebuild-install warn install No prebuilt binaries found (target=20.20.2 runtime=node arch=x64 libc=musl platform=linux)
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp info it worked if it ends with ok
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp info using node-gyp@10.1.0
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp info using node@20.20.2 | linux | x64
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python Python is not set from command line or npm configuration
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python Python is not set from environment variable PYTHON
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python checking if "python3" can be used
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python - executable path is ""
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python - "" could not be run
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python checking if "python" can be used
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python - executable path is ""
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python - "" could not be run
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python **********************************************************
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python You need to install the latest version of Python.
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python Node-gyp should be able to find and use Python. If not,
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python you can try one of the following options:
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python - Use the switch --python="/path/to/pythonexecutable"
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python (accepted by both node-gyp and npm)
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python - Set the environment variable PYTHON
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python - Set the npm configuration variable python:
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python npm config set python "/path/to/pythonexecutable"
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python For more information consult the documentation at:
+2026-Jul-08 14:54:32.788432 [DEBUG] #12 30.31 npm error gyp ERR! find Python https://github.com/nodejs/node-gyp#installation
+2026-Jul-08 14:<REDACTED>@11.18.0
+2026-Jul-08 14:54:32.939375 [DEBUG] #12 30.31 npm notice
+2026-Jul-08 14:54:32.939375 [DEBUG] #12 30.31 npm error A complete log of this run can be found in: /root/.npm/_logs/2026-07-08T09_24_03_416Z-debug-0.log
+2026-Jul-08 14:54:33.001151 [DEBUG] #12 ERROR: process "/bin/sh -c npm ci" did not complete successfully: exit code: 1
+2026-Jul-08 14:54:33.028888 [DEBUG] ------
+2026-Jul-08 14:54:33.028888 [DEBUG] > [deps 2/2] RUN npm ci:
+2026-Jul-08 14:54:33.028888 [DEBUG] 30.31 npm error gyp ERR! cwd /app/node_modules/better-sqlite3
+2026-Jul-08 14:54:33.028888 [DEBUG] 30.31 npm error gyp ERR! node -v v20.20.2
+2026-Jul-08 14:54:33.028888 [DEBUG] 30.31 npm error gyp ERR! node-gyp -v v10.1.0
+2026-Jul-08 14:54:33.028888 [DEBUG] 30.31 npm error gyp ERR! not ok
+2026-Jul-08 14:54:33.028888 [DEBUG] 30.31 npm notice
+2026-Jul-08 14:54:33.028888 [DEBUG] 30.31 npm notice New major version of npm available! 10.8.2 -> 11.18.0
+2026-Jul-08 14:54:33.028888 [DEBUG] 30.31 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.18.0
+2026-Jul-08 14:<REDACTED>@11.18.0
+2026-Jul-08 14:54:33.028888 [DEBUG] 30.31 npm notice
+2026-Jul-08 14:54:33.028888 [DEBUG] 30.31 npm error A complete log of this run can be found in: /root/.npm/_logs/2026-07-08T09_24_03_416Z-debug-0.log
+2026-Jul-08 14:54:33.028888 [DEBUG] ------
+2026-Jul-08 14:54:33.042469 [DEBUG] 20 warnings found (use docker --debug to expand):
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_ACCESS_KEY_ID") (line 57)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "SEED_ADMIN_PASSWORD") (line 65)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_ACCESS_KEY_ID") (line 87)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "SEED_ADMIN_PASSWORD") (line 15)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 92)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 93)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_ACCESS_KEY_ID") (line 7)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 62)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_SECRET_ACCESS_KEY") (line 88)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_SECRET_ACCESS_KEY") (line 33)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 37)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "SEED_ADMIN_PASSWORD") (line 40)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_SECRET_ACCESS_KEY") (line 58)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 63)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "SEED_ADMIN_PASSWORD") (line 95)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_SECRET_ACCESS_KEY") (line 8)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 12)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 13)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_ACCESS_KEY_ID") (line 32)
+2026-Jul-08 14:54:33.042469 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 38)
+2026-Jul-08 14:54:33.048819 [DEBUG] Dockerfile:51
+2026-Jul-08 14:54:33.048819 [DEBUG] --------------------
+2026-Jul-08 14:54:33.048819 [DEBUG] 49 |     ARG COOLIFY_RESOURCE_UUID=krp46d1owoxa7j0w0qt6z0yv
+2026-Jul-08 14:54:33.048819 [DEBUG] 50 |     COPY package.json package-lock.json ./
+2026-Jul-08 14:54:33.048819 [DEBUG] 51 | >>> RUN npm ci
+2026-Jul-08 14:54:33.048819 [DEBUG] 52 |
+2026-Jul-08 14:54:33.048819 [DEBUG] 53 |     FROM base AS builder
+2026-Jul-08 14:54:33.048819 [DEBUG] --------------------
+2026-Jul-08 14:54:33.048819 [DEBUG] ERROR: failed to build: failed to solve: process "/bin/sh -c npm ci" did not complete successfully: exit code: 1
+2026-Jul-08 14:54:33.048819 [DEBUG] exit status 1
+2026-Jul-08 14:54:33.109680 ========================================
+2026-Jul-08 14:54:33.124929 Deployment failed: Command execution failed (exit code 1): docker exec blt2siq6eqkjfhnrwnisx1ca bash -c 'bash /artifacts/build.sh'
+2026-Jul-08 14:54:33.124929 Error: #0 building with "default" instance using docker driver
+2026-Jul-08 14:54:33.124929 
+2026-Jul-08 14:54:33.124929 #1 [internal] load build definition from Dockerfile
+2026-Jul-08 14:54:33.124929 #1 transferring dockerfile: 5.28kB done
+2026-Jul-08 14:54:33.124929 #1 DONE 0.1s
+2026-Jul-08 14:54:33.124929 
+2026-Jul-08 14:54:33.124929 #2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+2026-Jul-08 14:54:33.124929 #2 DONE 2.4s
+2026-Jul-08 14:54:33.124929 
+2026-Jul-08 14:54:33.124929 #3 docker-image://docker.io/docker/dockerfile:1@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89
+2026-Jul-08 14:54:33.124929 #3 resolve docker.io/docker/dockerfile:1@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89 done
+2026-Jul-08 14:54:33.124929 #3 sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89 9.08kB / 9.08kB done
+2026-Jul-08 14:54:33.124929 #3 sha256:e82bbc85c3cb06cf2a5a27b058208b43984448acbcd6a832cd1491933d4376dd 1.13kB / 1.13kB done
+2026-Jul-08 14:54:33.124929 #3 sha256:1a998cca4d41cfecafb1989342c5e7378bc992589af7d47510c4b854bebfc7d7 1.33kB / 1.33kB done
+2026-Jul-08 14:54:33.124929 #3 sha256:50ba52cd6a2c01eaf1a9efbedc7c75b5da5e3965c1586001c722980487a73fd7 0B / 14.36MB 0.1s
+2026-Jul-08 14:54:33.124929 #3 sha256:50ba52cd6a2c01eaf1a9efbedc7c75b5da5e3965c1586001c722980487a73fd7 2.10MB / 14.36MB 0.3s
+2026-Jul-08 14:54:33.124929 #3 sha256:50ba52cd6a2c01eaf1a9efbedc7c75b5da5e3965c1586001c722980487a73fd7 13.63MB / 14.36MB 0.4s
+2026-Jul-08 14:54:33.124929 #3 extracting sha256:50ba52cd6a2c01eaf1a9efbedc7c75b5da5e3965c1586001c722980487a73fd7
+2026-Jul-08 14:54:33.124929 #3 sha256:50ba52cd6a2c01eaf1a9efbedc7c75b5da5e3965c1586001c722980487a73fd7 14.36MB / 14.36MB 0.4s done
+2026-Jul-08 14:54:33.124929 #3 extracting sha256:50ba52cd6a2c01eaf1a9efbedc7c75b5da5e3965c1586001c722980487a73fd7 0.1s done
+2026-Jul-08 14:54:33.124929 #3 DONE 0.6s
+2026-Jul-08 14:54:33.124929 
+2026-Jul-08 14:54:33.124929 #4 [internal] load metadata for docker.io/library/node:20-alpine
+2026-Jul-08 14:54:33.124929 #4 DONE 2.2s
+2026-Jul-08 14:54:33.124929 
+2026-Jul-08 14:54:33.124929 #5 [internal] load .dockerignore
+2026-Jul-08 14:54:33.124929 #5 transferring context: 352B done
+2026-Jul-08 14:54:33.124929 #5 DONE 0.0s
+2026-Jul-08 14:54:33.124929 
+2026-Jul-08 14:54:33.124929 #6 [base 1/3] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+2026-Jul-08 14:54:33.124929 #6 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.0s done
+2026-Jul-08 14:54:33.124929 #6 sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 7.67kB / 7.67kB done
+2026-Jul-08 14:54:33.124929 #6 sha256:afdf98210b07b586eb71fa22ba2e432e058e4cd1304d31ed60888755b8c865fb 1.72kB / 1.72kB done
+2026-Jul-08 14:54:33.124929 #6 sha256:11cedc39e663e7c5d5cb9cc77a461a0d2adc25537b94e6831a6108f09cb2001b 6.52kB / 6.52kB done
+2026-Jul-08 14:54:33.124929 #6 DONE 0.2s
+2026-Jul-08 14:54:33.124929 
+2026-Jul-08 14:54:33.124929 #7 [internal] load build context
+2026-Jul-08 14:54:33.124929 #7 transferring context: 938.96kB 0.1s done
+2026-Jul-08 14:54:33.124929 #7 DONE 0.1s
+2026-Jul-08 14:54:33.124929 
+2026-Jul-08 14:54:33.124929 #8 [base 2/3] RUN apk add --no-cache libc6-compat openssl
+2026-Jul-08 14:54:33.124929 #8 0.906 (1/6) Upgrading libcrypto3 (3.5.6-r0 -> 3.5.7-r0)
+2026-Jul-08 14:54:33.124929 #8 1.023 (2/6) Upgrading libssl3 (3.5.6-r0 -> 3.5.7-r0)
+2026-Jul-08 14:54:33.124929 #8 1.054 (3/6) Installing musl-obstack (1.2.3-r2)
+2026-Jul-08 14:54:33.124929 #8 1.068 (4/6) Installing libucontext (1.3.3-r0)
+2026-Jul-08 14:54:33.124929 #8 1.069 (5/6) Installing gcompat (1.1.0-r4)
+2026-Jul-08 14:54:33.124929 #8 1.078 (6/6) Installing openssl (3.5.7-r0)
+2026-Jul-08 14:54:33.124929 #8 1.157 Executing busybox-1.37.0-r30.trigger
+2026-Jul-08 14:54:33.124929 #8 1.222 OK: 11.8 MiB in 22 packages
+2026-Jul-08 14:54:33.124929 #8 DONE 1.7s
+2026-Jul-08 14:54:33.124929 
+2026-Jul-08 14:54:33.124929 #9 [base 3/3] WORKDIR /app
+2026-Jul-08 14:54:33.124929 #9 DONE 0.2s
+2026-Jul-08 14:54:33.124929 
+2026-Jul-08 14:54:33.124929 #10 [deps 1/2] COPY package.json package-lock.json ./
+2026-Jul-08 14:54:33.124929 #10 DONE 0.3s
+2026-Jul-08 14:54:33.124929 
+2026-Jul-08 14:54:33.124929 #11 [runner  1/14] RUN addgroup --system --gid 1001 nodejs   && adduser --system --uid 1001 nextjs
+2026-Jul-08 14:54:33.124929 #11 DONE 0.4s
+2026-Jul-08 14:54:33.124929 
+2026-Jul-08 14:54:33.124929 #12 [deps 2/2] RUN npm ci
+2026-Jul-08 14:54:33.124929 #12 2.508 npm warn EBADENGINE Unsupported engine {
+2026-Jul-08 14:54:33.124929 #12 2.508 npm warn EBADENGINE   package: '@prisma/streams-local@0.1.2',
+2026-Jul-08 14:54:33.124929 #12 2.508 npm warn EBADENGINE   required: { bun: '>=1.3.6', node: '>=22.0.0' },
+2026-Jul-08 14:54:33.124929 #12 2.508 npm warn EBADENGINE   current: { node: 'v20.20.2', npm: '10.8.2' }
+2026-Jul-08 14:54:33.124929 #12 2.508 npm warn EBADENGINE }
+2026-Jul-08 14:54:33.124929 #12 7.521 npm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error code 1
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error path /app/node_modules/better-sqlite3
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error command failed
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error command sh -c prebuild-install || node-gyp rebuild --release
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error prebuild-install warn install No prebuilt binaries found (target=20.20.2 runtime=node arch=x64 libc=musl platform=linux)
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp info it worked if it ends with ok
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp info using node-gyp@10.1.0
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp info using node@20.20.2 | linux | x64
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python Python is not set from command line or npm configuration
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python Python is not set from environment variable PYTHON
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python checking if "python3" can be used
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python - executable path is ""
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python - "" could not be run
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python checking if "python" can be used
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python - executable path is ""
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python - "" could not be run
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python **********************************************************
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python You need to install the latest version of Python.
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python Node-gyp should be able to find and use Python. If not,
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python you can try one of the following options:
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python - Use the switch --python="/path/to/pythonexecutable"
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python (accepted by both node-gyp and npm)
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python - Set the environment variable PYTHON
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python - Set the npm configuration variable python:
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python npm config set python "/path/to/pythonexecutable"
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python For more information consult the documentation at:
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error gyp ERR! find Python https://github.com/nodejs/node-gyp#installation
+2026-Jul-08 14:<REDACTED>@11.18.0
+2026-Jul-08 14:54:33.124929 #12 30.31 npm notice
+2026-Jul-08 14:54:33.124929 #12 30.31 npm error A complete log of this run can be found in: /root/.npm/_logs/2026-07-08T09_24_03_416Z-debug-0.log
+2026-Jul-08 14:54:33.124929 #12 ERROR: process "/bin/sh -c npm ci" did not complete successfully: exit code: 1
+2026-Jul-08 14:54:33.124929 ------
+2026-Jul-08 14:54:33.124929 > [deps 2/2] RUN npm ci:
+2026-Jul-08 14:54:33.124929 30.31 npm error gyp ERR! cwd /app/node_modules/better-sqlite3
+2026-Jul-08 14:54:33.124929 30.31 npm error gyp ERR! node -v v20.20.2
+2026-Jul-08 14:54:33.124929 30.31 npm error gyp ERR! node-gyp -v v10.1.0
+2026-Jul-08 14:54:33.124929 30.31 npm error gyp ERR! not ok
+2026-Jul-08 14:54:33.124929 30.31 npm notice
+2026-Jul-08 14:54:33.124929 30.31 npm notice New major version of npm available! 10.8.2 -> 11.18.0
+2026-Jul-08 14:54:33.124929 30.31 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.18.0
+2026-Jul-08 14:<REDACTED>@11.18.0
+2026-Jul-08 14:54:33.124929 30.31 npm notice
+2026-Jul-08 14:54:33.124929 30.31 npm error A complete log of this run can be found in: /root/.npm/_logs/2026-07-08T09_24_03_416Z-debug-0.log
+2026-Jul-08 14:54:33.124929 ------
+2026-Jul-08 14:54:33.124929 
+2026-Jul-08 14:54:33.124929 20 warnings found (use docker --debug to expand):
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_ACCESS_KEY_ID") (line 57)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "SEED_ADMIN_PASSWORD") (line 65)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_ACCESS_KEY_ID") (line 87)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "SEED_ADMIN_PASSWORD") (line 15)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 92)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 93)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_ACCESS_KEY_ID") (line 7)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 62)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_SECRET_ACCESS_KEY") (line 88)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_SECRET_ACCESS_KEY") (line 33)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 37)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "SEED_ADMIN_PASSWORD") (line 40)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_SECRET_ACCESS_KEY") (line 58)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 63)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "SEED_ADMIN_PASSWORD") (line 95)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_SECRET_ACCESS_KEY") (line 8)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 12)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 13)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "S3_ACCESS_KEY_ID") (line 32)
+2026-Jul-08 14:54:33.124929 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 38)
+2026-Jul-08 14:54:33.124929 Dockerfile:51
+2026-Jul-08 14:54:33.124929 --------------------
+2026-Jul-08 14:54:33.124929 49 |     ARG COOLIFY_RESOURCE_UUID=krp46d1owoxa7j0w0qt6z0yv
+2026-Jul-08 14:54:33.124929 50 |     COPY package.json package-lock.json ./
+2026-Jul-08 14:54:33.124929 51 | >>> RUN npm ci
+2026-Jul-08 14:54:33.124929 52 |
+2026-Jul-08 14:54:33.124929 53 |     FROM base AS builder
+2026-Jul-08 14:54:33.124929 --------------------
+2026-Jul-08 14:54:33.124929 ERROR: failed to build: failed to solve: process "/bin/sh -c npm ci" did not complete successfully: exit code: 1
+2026-Jul-08 14:54:33.124929 exit status 1
+2026-Jul-08 14:54:33.135286 [DEBUG] Error type: App\Exceptions\DeploymentException
+2026-Jul-08 14:54:33.142172 [DEBUG] Error code: 0
+2026-Jul-08 14:54:33.149126 [DEBUG] Location: /var/www/html/app/Traits/ExecuteRemoteCommand.php:242
+2026-Jul-08 14:54:33.155842 [DEBUG] Stack trace (first 5 lines):
+2026-Jul-08 14:54:33.162666 [DEBUG] #0 /var/www/html/app/Traits/ExecuteRemoteCommand.php(106): App\Jobs\ApplicationDeploymentJob->executeCommandWithProcess()
+2026-Jul-08 14:54:33.170442 [DEBUG] #1 /var/www/html/vendor/laravel/framework/src/Illuminate/Collections/Traits/EnumeratesValues.php(275): App\Jobs\ApplicationDeploymentJob->{closure:App\Traits\ExecuteRemoteCommand::execute_remote_command():72}()
+2026-Jul-08 14:54:33.179124 [DEBUG] #2 /var/www/html/app/Traits/ExecuteRemoteCommand.php(72): Illuminate\Support\Collection->each()
+2026-Jul-08 14:54:33.192522 [DEBUG] #3 /var/www/html/app/Jobs/ApplicationDeploymentJob.php(3821): App\Jobs\ApplicationDeploymentJob->execute_remote_command()
+2026-Jul-08 14:54:33.205728 [DEBUG] #4 /var/www/html/app/Jobs/ApplicationDeploymentJob.php(912): App\Jobs\ApplicationDeploymentJob->build_image()
+2026-Jul-08 14:54:33.220199 ========================================
+2026-Jul-08 14:54:33.229663 Deployment failed. Removing the new version of your application.
+2026-Jul-08 14:54:33.655403 Gracefully shutting down build container: blt2siq6eqkjfhnrwnisx1ca
+2026-Jul-08 14:54:33.783229 [DEBUG] [CMD]: docker stop --time=30 blt2siq6eqkjfhnrwnisx1ca
+2026-Jul-08 14:54:33.783229 [DEBUG] Flag --time has been deprecated, use --timeout instead
+2026-Jul-08 14:54:33.989790 [DEBUG] blt2siq6eqkjfhnrwnisx1ca
