@@ -5,7 +5,9 @@ import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
+  BarController,
   BarElement,
+  LineController,
   LineElement,
   PointElement,
   Tooltip,
@@ -18,10 +20,15 @@ import {
 import { Chart } from "react-chartjs-2";
 import { BarChart3, ArrowUpRight } from "lucide-react";
 
+// Controllers must be registered explicitly (BarElement alone is not enough).
+// Production builds tree-shake unregistered Chart.js modules and crash with
+// "bar is not a registered controller".
 ChartJS.register(
   CategoryScale,
   LinearScale,
+  BarController,
   BarElement,
+  LineController,
   LineElement,
   PointElement,
   Tooltip,

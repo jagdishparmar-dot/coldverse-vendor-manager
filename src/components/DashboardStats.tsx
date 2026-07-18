@@ -44,7 +44,7 @@ interface DashboardStatsProps {
 }
 
 export default function DashboardStats({ stats, loading, monthlyTrend, statusKPIs, onStatusClick }: DashboardStatsProps) {
-  if (loading || !stats) {
+  if (loading && !stats) {
     return (
       <div id="stats-loading-skeleton" className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-pulse">
@@ -59,6 +59,10 @@ export default function DashboardStats({ stats, loading, monthlyTrend, statusKPI
         </div>
       </div>
     );
+  }
+
+  if (!stats) {
+    return null;
   }
 
   // Format currency in INR

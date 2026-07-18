@@ -85,9 +85,16 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Vendor portal deep links stay on `/`
-  if (pathname === "/" && searchParams.has("token")) {
+  // Portal routes are public
+  if (pathname.startsWith("/portal/")) {
     return NextResponse.next();
+  }
+
+  // Legacy vendor portal deep links: redirect /?token=x to /portal/x
+  if (pathname === "/" && searchParams.has("token")) {
+    const token = searchParams.get("token")!;
+    const portalUrl = new URL(`/portal/${encodeURIComponent(token)}`, request.url);
+    return NextResponse.redirect(portalUrl);
   }
 
   if (ADMIN_PAGE_PATHS.has(pathname)) {
@@ -102,8 +109,6 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL(ADMIN_DEFAULT_PATH, request.url));
     }
 
-    // Logged-in users hitting bare `/` are sent to the dashboard by the page client;
-    // proxy allows through so portal redirect logic can run without a loop.
     return NextResponse.next();
   }
 
@@ -123,6 +128,7 @@ export const config = {
     "/remarks",
     "/kyc",
     "/archive",
+    "/portal/:path*",
     "/api/:path*",
   ],
 };

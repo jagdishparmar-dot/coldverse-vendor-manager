@@ -28,14 +28,19 @@ function getStorageDriver(): "local" | "s3" {
 
 function getLocalUploadsDir(): string {
   const configured = readEnv("LOCAL_UPLOADS_DIR", "UPLOADS_DIR");
-  return configured
-    ? path.resolve(configured)
-    : path.join(process.cwd(), "uploads");
+  // turbopackIgnore: runtime-only upload dir; do not NFT-trace project root.
+  const cwd = /* turbopackIgnore: true */ process.cwd();
+  if (configured) {
+    return path.isAbsolute(configured)
+      ? configured
+      : path.join(/* turbopackIgnore: true */ cwd, configured);
+  }
+  return path.join(/* turbopackIgnore: true */ cwd, "uploads");
 }
 
 function ensureLocalUploadsDir(): string {
   const dir = getLocalUploadsDir();
-  fs.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(/* turbopackIgnore: true */ dir, { recursive: true });
   return dir;
 }
 
@@ -192,22 +197,22 @@ function toStorageError(error: unknown): Error {
 async function uploadLocalFile(key: string, buffer: Buffer): Promise<string> {
   const dir = ensureLocalUploadsDir();
   const safeKey = sanitizeStorageKey(key);
-  const filePath = path.join(dir, safeKey);
-  await fs.promises.writeFile(filePath, buffer);
+  const filePath = path.join(/* turbopackIgnore: true */ dir, safeKey);
+  await fs.promises.writeFile(/* turbopackIgnore: true */ filePath, buffer);
   return safeKey;
 }
 
 async function getLocalObject(key: string) {
   const dir = getLocalUploadsDir();
   const safeKey = sanitizeStorageKey(key);
-  const filePath = path.join(dir, safeKey);
+  const filePath = path.join(/* turbopackIgnore: true */ dir, safeKey);
 
-  if (!fs.existsSync(filePath)) {
+  if (!fs.existsSync(/* turbopackIgnore: true */ filePath)) {
     throw new Error("Invoice file not found in storage.");
   }
 
   return {
-    body: fs.createReadStream(filePath),
+    body: fs.createReadStream(/* turbopackIgnore: true */ filePath),
     contentType: guessContentType(safeKey),
   };
 }

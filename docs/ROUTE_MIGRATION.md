@@ -13,12 +13,10 @@ Admin console tabs map to App Router paths while `src/App.tsx` remains the share
 | `/remarks` | Remarks Summary |
 | `/kyc` | KYC Approvals |
 | `/archive` | Archive |
-| `/?token=…` | Vendor portal (unchanged) |
 
 - Nav uses Next.js `Link`
 - Auth (`proxy.ts`) guards the new admin paths
 - Logged-in `/` without token → `/dashboard`
-- Vendor share links always use `/?token=…`
 
 Route map: `src/constants/adminRoutes.ts`
 
@@ -36,11 +34,24 @@ Admin tab UI lives under `src/features/admin/views/`:
 | `KycView` | KYC Approvals |
 | `ArchiveView` | Archive |
 
-Shared helpers: `src/features/admin/utils.ts`. `App.tsx` still owns data fetching, modals, portal mode, and print/preview.
+Shared helpers: `src/features/admin/utils.ts`. `App.tsx` still owns data fetching, modals, and print/preview.
 
-## Phase 3 — portal route
+## Phase 3 (done) — portal route
 
-Move portal to `/portal/[token]` (or `/p/[token]`) and stop mixing portal into `App` admin mode.
+Vendor portal extracted to dedicated route `/portal/[token]`:
+
+| Path | Component |
+|------|-----------|
+| `/portal/[token]` | `src/features/portal/VendorPortal.tsx` |
+
+- `app/portal/[token]/page.tsx` renders the `VendorPortal` component
+- `VendorPortal` accepts a `token` prop and handles OTP, KYC, upload, and invoice editing
+- Old `/?token=x` URLs redirect to `/portal/x` (handled at proxy level)
+- Portal routes are public (no auth required)
+- `App.tsx` is now admin-only (no `initialVendorToken` prop)
+- Share links use `portalShareUrl()` from `src/constants/portalRoutes.ts`
+
+Route helpers: `src/constants/portalRoutes.ts`
 
 ## Phase 4 — optional RSC / server loaders
 

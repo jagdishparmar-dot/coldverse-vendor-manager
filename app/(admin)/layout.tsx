@@ -1,24 +1,13 @@
-"use client";
-
-import App from "@/src/App";
+import AdminShell from "./AdminShell";
 
 /**
- * Phase 1 admin shell: mount App once in the layout so soft navigations
- * between /dashboard, /vendors, etc. keep client state and avoid refetch storms.
- * Page segments exist for URL/routing; App derives the active tab from pathname.
+ * Server layout: route segment changes update `children` only.
+ * App stays mounted inside the client AdminShell across /dashboard, /vendors, etc.
  */
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <>
-      <App />
-      {/* Keep route segment mounted for Next.js App Router */}
-      <div className="sr-only" aria-hidden>
-        {children}
-      </div>
-    </>
-  );
+  return <AdminShell>{children}</AdminShell>;
 }

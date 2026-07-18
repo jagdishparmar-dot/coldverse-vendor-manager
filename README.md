@@ -84,7 +84,7 @@ npm run dev
 
 ## Admin authentication
 
-The admin console requires email/password login via [better-auth](https://www.better-auth.com). The vendor portal (`/?token=<vendorToken>`) remains public with the existing OTP flow.
+The admin console requires email/password login via [better-auth](https://www.better-auth.com). The vendor portal (`/portal/<vendorToken>`) is public with OTP verification.
 
 - **Login:** `/login`
 - **Profile & password:** `/profile`
@@ -103,7 +103,7 @@ npm run dev:next
 All endpoints match the legacy Express app under `/api/*`:
 
 - Vendors, invoices, hubs, categories, stats, archive
-- Vendor portal OTP flow (`/?token=<vendorToken>`)
+- Vendor portal OTP flow (`/portal/<vendorToken>`)
 - Invoice upload (base64 JSON) and S3-backed download/view
 
 ## UI components

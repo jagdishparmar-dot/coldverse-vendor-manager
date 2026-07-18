@@ -1,11 +1,10 @@
 ﻿"use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef, startTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Users,
-  FileCheck,
   Plus,
   Share2,
   Copy,
@@ -35,17 +34,17 @@ import {
   LayoutGrid,
   List,
 } from "lucide-react";
-import { Vendor, Invoice, Hub, CompanyProfile } from "./types";
+import type { Vendor, Invoice, Hub } from "./types";
 import BulkUpload from "./components/BulkUpload";
 import VendorForm from "./components/VendorForm";
-import PortalKycGate from "./components/PortalKycGate";
-import PortalInvoiceGenerator from "./components/PortalInvoiceGenerator";
 import { SmileLogo } from "./components/Logo";
+import { portalShareUrl } from "@/src/constants/portalRoutes";
 import { exportInvoicesToExcel } from "./utils/excelExport";
 import { ColdverseSelect } from "@/src/components/coldverse-select";
 import { ColdverseDateField } from "@/src/components/coldverse-date-field";
 import { UserMenu } from "@/src/components/UserMenu";
 import { AdminRefreshControl } from "@/src/components/AdminRefreshControl";
+import ChallanPrintModal from "@/src/features/admin/components/ChallanPrintModal";
 import { useSession } from "@/lib/auth-client";
 import {
   ADMIN_NAV,
@@ -85,18 +84,12 @@ const MONTH_FILTER_OPTIONS = [
 
 const ALL_CATEGORIES = ["Rent", "Manpower", "Vehicle rent", "Repairs & maintenance", "Electricity", "Others"];
 
-type AppProps = {
-  /** When present, App stays in vendor-portal mode only (never renders admin UI). */
-  initialVendorToken?: string | null;
-};
-
-export default function App({ initialVendorToken = null }: AppProps) {
+export default function App() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const router = useRouter();
 
   // Routing State based on URL Search Query Token â€” seed from URL so portal never flashes admin UI
-  const [vendorToken, setVendorToken] = useState<string | null>(initialVendorToken);
   const [allCategories, setAllCategories] = useState<string[]>(ALL_CATEGORIES);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -119,10 +112,17 @@ export default function App({ initialVendorToken = null }: AppProps) {
   const [archivedInvoices, setArchivedInvoices] = useState<Invoice[]>([]);
   const [hubs, setHubs] = useState<Hub[]>([]);
   
-  // UI states
-  const [activeTab, setActiveTab] = useState<AdminTab>(
-    () => tabFromPathname(pathname) || "dashboard"
+  // UI states — optimistic tab avoids waiting on route transition / remount flashes
+  const routeTab = useMemo(
+    () => tabFromPathname(pathname) || "dashboard",
+    [pathname]
   );
+  const [optimisticTab, setOptimisticTab] = useState<AdminTab | null>(null);
+  const activeTab = optimisticTab ?? routeTab;
+  const [visitedTabs, setVisitedTabs] = useState<Set<AdminTab>>(
+    () => new Set<AdminTab>([routeTab])
+  );
+  const hasLoadedOnceRef = useRef(false);
   const [showSingleVendorModal, setShowSingleVendorModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [vendorViewMode, setVendorViewMode] = useState<"grid" | "table">("grid");
@@ -160,66 +160,6 @@ export default function App({ initialVendorToken = null }: AppProps) {
 
   const handlePrintChallan = (invoice: Invoice) => {
     setActiveChallanInvoice(invoice);
-  };
-
-  // Convert number to Indian Rupees words
-  const numberToWordsINR = (num: number): string => {
-    const a = [
-      "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
-      "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"
-    ];
-    const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-
-    if (num === 0) return "Zero";
-
-    const formatHundreds = (n: number) => {
-      let str = "";
-      if (n >= 100) {
-        str += a[Math.floor(n / 100)] + " Hundred ";
-        n %= 100;
-      }
-      if (n > 0) {
-        if (str !== "") str += "and ";
-        if (n < 20) {
-          str += a[n];
-        } else {
-          str += b[Math.floor(n / 10)];
-          if (n % 10 > 0) str += "-" + a[n % 10];
-        }
-      }
-      return str.trim();
-    };
-
-    let result = "";
-    let crore = Math.floor(num / 10000000);
-    num %= 10000000;
-    let lakh = Math.floor(num / 100000);
-    num %= 100000;
-    let thousand = Math.floor(num / 1000);
-    num %= 1000;
-
-    if (crore > 0) {
-      result += formatHundreds(crore) + " Crore ";
-    }
-    if (lakh > 0) {
-      result += formatHundreds(lakh) + " Lakh ";
-    }
-    if (thousand > 0) {
-      result += formatHundreds(thousand) + " Thousand ";
-    }
-    if (num > 0) {
-      result += formatHundreds(num);
-    }
-
-    return result.trim() + " Rupees Only";
-  };
-
-  // Generate deterministic Challan Number
-  const getChallanNumber = (invoice: Invoice) => {
-    const year = invoice.date ? invoice.date.split("-")[0] : "2026";
-    const rawId = invoice.id.replace("inv-", "");
-    const formattedId = rawId.length > 5 ? rawId.slice(-5) : rawId.padStart(5, "0");
-    return `CH-${year}-${formattedId.toUpperCase()}`;
   };
 
   const renderPrintAndPreview = () => {
@@ -319,286 +259,11 @@ export default function App({ initialVendorToken = null }: AppProps) {
     }
 
     if (activeChallanInvoice) {
-      const challanNumber = getChallanNumber(activeChallanInvoice);
-      const amountInWords = numberToWordsINR(activeChallanInvoice.amount);
-
       return (
-        <>
-          {/* On-screen Modal Preview for Challan */}
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto screen-only">
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-3xl w-full flex flex-col my-auto transition-all animate-fade-in">
-              {/* Modal Header */}
-              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-150/80 bg-slate-50/50 rounded-t-2xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-violet-50 flex items-center justify-center">
-                    <FileCheck className="w-5 h-5 text-violet-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-display font-bold text-gray-950 leading-tight">Payment Challan Copy</h2>
-                    <p className="text-[11px] text-gray-400 font-medium">Official deposit challan for vendor payment processing</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setActiveChallanInvoice(null)}
-                  className="text-gray-400 hover:text-gray-600 hover:bg-slate-100/80 p-1.5 rounded-lg transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Modal Body: A4 Paper Challan Copy Simulation */}
-              <div className="p-6 bg-slate-100/40 border-b border-gray-100 max-h-[65vh] overflow-y-auto flex flex-col items-center">
-                <div className="bg-white p-6 sm:p-8 shadow-lg border border-slate-200 rounded-xl w-full max-w-[680px] text-black text-left font-sans">
-                  
-                  {/* Top Header of Challan */}
-                  <div className="border-b-2 border-gray-900 pb-4 mb-4 flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <SmileLogo className="h-8 w-auto" showText={false} />
-                      </div>
-                      <p className="text-[9px] text-gray-500 font-bold tracking-wider uppercase">
-                        Shree Maruti Integrated Logistics Limited
-                      </p>
-                      <p className="text-[8px] text-gray-400">
-                        Corporate Off: Navrangpura, Ahmedabad, Gujarat - 380009
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[8px] font-bold uppercase tracking-widest text-violet-600 bg-violet-50 px-2 py-0.5 rounded border border-violet-100 inline-block mb-1">
-                        Official Payment Challan
-                      </span>
-                      <h1 className="text-base font-bold text-gray-900 font-display">CHALLAN COPY</h1>
-                      <p className="text-[10px] text-red-600 font-bold font-mono mt-0.5">Challan No: {challanNumber}</p>
-                      <p className="text-[8px] text-gray-400">Gen Date: {new Date(activeChallanInvoice.uploadedAt).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-
-                  {/* Warning / Instruction Info */}
-                  <div className="bg-amber-50/60 border border-amber-100 rounded-lg p-2.5 mb-4 text-[9px] text-amber-800 leading-normal">
-                    <strong>Payment Process Directive:</strong> Please process the payment for the gross payable sum. Always quote the auto-generated <strong>Challan Number ({challanNumber})</strong> in your transaction narration/reference field to facilitate automated accounts reconciliation.
-                  </div>
-
-                  {/* Two Column details */}
-                  <div className="grid grid-cols-2 gap-4 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100 text-[10px]">
-                    <div>
-                      <p className="font-bold text-slate-400 uppercase tracking-wider text-[8px] mb-1">Vendor (Beneficiary)</p>
-                      <p className="font-bold text-slate-800 text-[11px]">{activeChallanInvoice.vendorName}</p>
-                      <p className="text-slate-500">ID: {activeChallanInvoice.vendorId}</p>
-                      <p className="text-slate-500">Service Category: <span className="font-semibold uppercase text-slate-700">{activeChallanInvoice.category}</span></p>
-                    </div>
-                    <div className="border-l border-slate-200 pl-4">
-                      <p className="font-bold text-slate-400 uppercase tracking-wider text-[8px] mb-1">Invoice Reference</p>
-                      <p className="font-bold text-slate-800">Invoice No: {activeChallanInvoice.invoiceNumber}</p>
-                      <p className="text-slate-500">Invoice Date: {activeChallanInvoice.date}</p>
-                      <p className="text-slate-500">Gross Amount: <span className="font-mono font-bold text-slate-800">{formatCurrency(activeChallanInvoice.amount)}</span></p>
-                    </div>
-                  </div>
-
-                  {/* Financial Settlement Table */}
-                  <div className="mb-4">
-                    <table className="min-w-full divide-y divide-slate-200 border border-slate-150 rounded-lg overflow-hidden text-[10px]">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-3 py-1.5 text-left font-bold text-slate-500 uppercase tracking-wider">Transaction Head</th>
-                          <th className="px-3 py-1.5 text-right font-bold text-slate-500 uppercase tracking-wider">Amount (INR)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-150 bg-white">
-                        <tr>
-                          <td className="px-3 py-2 text-slate-800 font-medium">
-                            Settlement of invoice {activeChallanInvoice.invoiceNumber} for {activeChallanInvoice.category} category.
-                          </td>
-                          <td className="px-3 py-2 text-right font-mono font-bold text-slate-950">
-                            {formatCurrency(activeChallanInvoice.amount)}
-                          </td>
-                        </tr>
-                        <tr className="bg-slate-50 font-bold">
-                          <td className="px-3 py-1.5 text-right text-slate-600 uppercase text-[9px]">
-                            Gross Payable Sum:
-                          </td>
-                          <td className="px-3 py-1.5 text-right font-mono text-slate-950">
-                            {formatCurrency(activeChallanInvoice.amount)}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Amount in Words */}
-                  <div className="bg-slate-50 border border-slate-100 rounded-lg p-2.5 mb-5 text-[10px]">
-                    <span className="text-slate-400 font-bold uppercase text-[8px] block mb-0.5">Amount in Words</span>
-                    <span className="font-bold text-slate-800 italic">{amountInWords}</span>
-                  </div>
-
-                  {/* Footer Stamps & Barcodes */}
-                  <div className="flex justify-between items-end border-t border-slate-200 pt-4 text-[9px]">
-                    <div>
-                      {/* Simulated Barcode */}
-                      <div className="flex flex-col items-start gap-1">
-                        <div className="h-6 w-32 bg-slate-900 flex items-end justify-between px-1 py-0.5">
-                          <div className="w-[1px] h-full bg-white"></div>
-                          <div className="w-[2px] h-full bg-white"></div>
-                          <div className="w-[1px] h-full bg-white"></div>
-                          <div className="w-[3px] h-full bg-white"></div>
-                          <div className="w-[1px] h-full bg-white"></div>
-                          <div className="w-[2px] h-full bg-white"></div>
-                          <div className="w-[4px] h-full bg-white"></div>
-                          <div className="w-[1px] h-full bg-white"></div>
-                          <div className="w-[2px] h-full bg-white"></div>
-                          <div className="w-[3px] h-full bg-white"></div>
-                        </div>
-                        <span className="font-mono text-[8px] text-slate-400 tracking-widest">{challanNumber}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="h-12 flex flex-col justify-end">
-                        <div className="border-t border-dashed border-slate-300 pt-1 inline-block w-40">
-                          <p className="font-bold text-slate-600">Authorized Officer Stamp</p>
-                          <p className="text-[8px] text-slate-400">Shree Maruti Accounts Desk</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-              {/* Modal Footer Actions */}
-              <div className="flex justify-between items-center px-6 py-4 border-t border-gray-100 bg-slate-50/50 rounded-b-2xl">
-                <p className="text-[11px] text-gray-400 font-medium">Please submit this physical challan copy at the cash counter or include it in electronic remittance.</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setActiveChallanInvoice(null)}
-                    className="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
-                  >
-                    Close Preview
-                  </button>
-                  <button
-                    onClick={() => window.print()}
-                    className="px-4 py-2 text-xs font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Printer className="w-4 h-4" />
-                    Print Challan
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Clean, Raw Print-Only version (Visible ONLY to the printer device) */}
-          <div className="print-only p-8 bg-white text-black font-sans max-w-[800px] mx-auto text-left leading-normal">
-            {/* Top Header of Challan */}
-            <div className="border-b-2 border-gray-950 pb-4 mb-4 flex justify-between items-start">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <SmileLogo className="h-10 w-auto" showText={false} />
-                </div>
-                <p className="text-[10px] text-gray-600 font-bold tracking-wider uppercase leading-none mt-1">
-                  Shree Maruti Integrated Logistics Limited
-                </p>
-                <p className="text-[9px] text-gray-500 mt-1">
-                  Corporate Head Office: Navrangpura, Ahmedabad, Gujarat - 380009
-                </p>
-              </div>
-              <div className="text-right">
-                <h1 className="text-lg font-bold text-gray-900 leading-none">OFFICIAL PAYMENT CHALLAN</h1>
-                <p className="text-xs text-red-600 font-bold font-mono mt-1">Challan No: {challanNumber}</p>
-                <p className="text-[9px] text-gray-400">Date Generated: {new Date(activeChallanInvoice.uploadedAt).toLocaleDateString()}</p>
-              </div>
-            </div>
-
-            {/* Directive */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-4 text-xs text-slate-800">
-              <strong>Remittance Instructions:</strong> Process the exact gross settlement amount specified below. Please quote the auto-generated <strong>Challan Number ({challanNumber})</strong> in your transaction details/remarks.
-            </div>
-
-            {/* Two Column details */}
-            <div className="grid grid-cols-2 gap-6 mb-4 bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs">
-              <div>
-                <p className="font-bold text-slate-400 uppercase tracking-wider text-[9px] mb-1">Vendor Beneficiary</p>
-                <p className="font-bold text-slate-800 text-[12px]">{activeChallanInvoice.vendorName}</p>
-                <p className="text-slate-600 font-medium">Vendor ID: {activeChallanInvoice.vendorId}</p>
-                <p className="text-slate-600 font-medium">Service Category: <span className="font-bold uppercase text-slate-700">{activeChallanInvoice.category}</span></p>
-              </div>
-              <div className="border-l border-slate-200 pl-6">
-                <p className="font-bold text-slate-400 uppercase tracking-wider text-[9px] mb-1">Invoice Reference</p>
-                <p className="font-bold text-slate-800">Invoice No: {activeChallanInvoice.invoiceNumber}</p>
-                <p className="text-slate-600 font-medium">Invoice Date: {activeChallanInvoice.date}</p>
-                <p className="text-slate-600 font-medium">Gross Payable: <span className="font-mono font-bold text-slate-800">{formatCurrency(activeChallanInvoice.amount)}</span></p>
-              </div>
-            </div>
-
-            {/* Financial Settlement Table */}
-            <div className="mb-4">
-              <table className="min-w-full divide-y divide-slate-300 border border-slate-300 rounded-lg overflow-hidden text-xs">
-                <thead className="bg-slate-100">
-                  <tr>
-                    <th className="px-4 py-2 text-left font-bold text-slate-600 uppercase tracking-wider">Transaction Head</th>
-                    <th className="px-4 py-2 text-right font-bold text-slate-600 uppercase tracking-wider">Amount (INR)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 bg-white">
-                  <tr>
-                    <td className="px-4 py-3 text-slate-800 font-semibold">
-                      Settlement of vendor invoice {activeChallanInvoice.invoiceNumber} under category "{activeChallanInvoice.category}".
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-bold text-slate-950 text-sm">
-                      {formatCurrency(activeChallanInvoice.amount)}
-                    </td>
-                  </tr>
-                  <tr className="bg-slate-50 font-bold text-sm">
-                    <td className="px-4 py-2.5 text-right text-slate-600 uppercase text-[10px]">
-                      Net Deposit Amount:
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-slate-950 text-base">
-                      {formatCurrency(activeChallanInvoice.amount)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Amount in Words */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-6 text-xs">
-              <span className="text-slate-400 font-bold uppercase text-[9px] block mb-1">Amount in Words</span>
-              <span className="font-extrabold text-slate-800 italic">{amountInWords}</span>
-            </div>
-
-            {/* Footer Stamps & Barcodes */}
-            <div className="flex justify-between items-end border-t border-slate-300 pt-6 text-xs mt-10">
-              <div>
-                {/* Simulated Barcode */}
-                <div className="flex flex-col items-start gap-1">
-                  <div className="h-8 w-44 bg-slate-900 flex items-end justify-between px-1 py-0.5">
-                    <div className="w-[1px] h-full bg-white"></div>
-                    <div className="w-[2px] h-full bg-white"></div>
-                    <div className="w-[1px] h-full bg-white"></div>
-                    <div className="w-[3px] h-full bg-white"></div>
-                    <div className="w-[1px] h-full bg-white"></div>
-                    <div className="w-[2px] h-full bg-white"></div>
-                    <div className="w-[4px] h-full bg-white"></div>
-                    <div className="w-[1px] h-full bg-white"></div>
-                    <div className="w-[2px] h-full bg-white"></div>
-                    <div className="w-[3px] h-full bg-white"></div>
-                    <div className="w-[1px] h-full bg-white"></div>
-                    <div className="w-[4px] h-full bg-white"></div>
-                    <div className="w-[2px] h-full bg-white"></div>
-                    <div className="w-[1px] h-full bg-white"></div>
-                  </div>
-                  <span className="font-mono text-[9px] text-slate-500 tracking-widest">{challanNumber}</span>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="h-16 flex flex-col justify-end">
-                  <div className="border-t border-dashed border-slate-400 pt-1.5 inline-block w-48">
-                    <p className="font-bold text-slate-700">Authorized Treasury Officer</p>
-                    <p className="text-[10px] text-slate-400">Shree Maruti Integrated Logistics Limited</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
+        <ChallanPrintModal
+          invoice={activeChallanInvoice}
+          onClose={() => setActiveChallanInvoice(null)}
+        />
       );
     }
 
@@ -607,98 +272,41 @@ export default function App({ initialVendorToken = null }: AppProps) {
   
   // Loading states
   const [adminLoading, setAdminLoading] = useState(true);
-  // Portal Mode Detection
-  const [portalLoading, setPortalLoading] = useState(() => Boolean(initialVendorToken));
-  
-  // Portal States (for logged-in vendor)
-  const [currentVendor, setCurrentVendor] = useState<Vendor | null>(null);
-  const [portalInvoices, setPortalInvoices] = useState<any[]>([]);
-  const [portalError, setPortalError] = useState("");
-  const [portalHubs, setPortalHubs] = useState<Hub[]>([]);
-  const [portalCompany, setPortalCompany] = useState<CompanyProfile | null>(null);
 
-  // OTP Verification States
-  const [isOtpVerified, setIsOtpVerified] = useState(false);
-  const [portalCheckedVendor, setPortalCheckedVendor] = useState<{ name: string; phone: string; maskedPhone: string } | null>(null);
-  const [otpRequested, setOtpRequested] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
-  const [otpPhone, setOtpPhone] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [isRequestingOtp, setIsRequestingOtp] = useState(false);
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-
-  // Portal Edit Invoice states
-  const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
-  const [editCategory, setEditCategory] = useState("");
-  const [editInvoiceNo, setEditInvoiceNo] = useState("");
-  const [editAmount, setEditAmount] = useState("");
-  const [editDate, setEditDate] = useState("");
-  const [editState, setEditState] = useState("");
-  const [editHubId, setEditHubId] = useState("");
-  const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
-  const [editBase64File, setEditBase64File] = useState<string | null>(null);
-  const [isUpdatingInvoice, setIsUpdatingInvoice] = useState(false);
-  const [editError, setEditError] = useState("");
-  
-  // Vendor Form Fields
-  const [pCategory, setPCategory] = useState("");
-  const [pInvoiceNo, setPInvoiceNo] = useState("");
-  const [pAmount, setPAmount] = useState("");
-  const [pDate, setPDate] = useState("");
-  const [pState, setPState] = useState("");
-  const [pHubId, setPHubId] = useState("");
-  const [pRemarks, setPRemarks] = useState("");
-  const [pSelectedFile, setPSelectedFile] = useState<File | null>(null);
-  const [pBase64File, setPBase64File] = useState<string | null>(null);
-  const [pSuccessMsg, setPSuccessMsg] = useState<string | null>(null);
-  const [pUploadError, setPUploadError] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [portalSubMode, setPortalSubMode] = useState<"upload" | "generate">("upload");
-  const [pHardCopySubmittedTo, setPHardCopySubmittedTo] = useState("");
-  const [pHardCopySubmissionDate, setPHardCopySubmissionDate] = useState("");
-
-  // Parse Token on Mount â€” portal links must never load admin data or UI
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token") || initialVendorToken;
+    fetchAdminData("initial");
+  }, []);
 
-    if (token) {
-      setVendorToken(token);
-      setPortalLoading(true);
-      fetchPortalData(token);
-      return;
-    }
-
-    setVendorToken(null);
-    fetchAdminData();
-  }, [initialVendorToken]);
-
-  // Phase 1: keep tab state in sync with App Router pathname
+  // Clear optimistic tab once the URL has caught up; mark tab as visited (keep-alive)
   useEffect(() => {
-    if (vendorToken || initialVendorToken) return;
-    const tab = tabFromPathname(pathname);
-    if (tab && tab !== activeTab) {
-      setActiveTab(tab);
+    setVisitedTabs((prev) => {
+      if (prev.has(activeTab)) return prev;
+      const next = new Set(prev);
+      next.add(activeTab);
+      return next;
+    });
+    if (optimisticTab && routeTab === optimisticTab) {
+      setOptimisticTab(null);
     }
-  }, [pathname, vendorToken, initialVendorToken, activeTab]);
+  }, [activeTab, optimisticTab, routeTab]);
 
   const navigateToTab = (tab: AdminTab) => {
-    setActiveTab(tab);
-    router.push(hrefForTab(tab));
+    setOptimisticTab(tab);
+    startTransition(() => {
+      router.push(hrefForTab(tab), { scroll: false });
+    });
   };
 
   // Auto-refresh timer for Admin Console
   useEffect(() => {
-    // Only auto-refresh in admin mode (no vendorToken) and if auto-refresh is enabled
-    if (vendorToken || !isAutoRefreshEnabled) {
+    if (!isAutoRefreshEnabled) {
       return;
     }
 
     const interval = setInterval(() => {
       setAutoRefreshCountdown((prev) => {
         if (prev <= 1) {
-          fetchAdminData();
+          fetchAdminData("silent");
           return 120;
         }
         return prev - 1;
@@ -706,129 +314,17 @@ export default function App({ initialVendorToken = null }: AppProps) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [vendorToken, isAutoRefreshEnabled]);
-
-  // Fetch Vendor Portal Specific Data
-  const fetchPortalData = async (token: string) => {
-    setPortalLoading(true);
-    setPortalError("");
-    try {
-      const response = await fetch(`/api/vendors/token/${encodeURIComponent(token)}`);
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          // OTP verification required
-          const checkRes = await fetch(`/api/vendors/portal-check/${encodeURIComponent(token)}`);
-          if (checkRes.ok) {
-            const checkData = await checkRes.json();
-            setPortalCheckedVendor({
-              name: checkData.name,
-              phone: checkData.phone,
-              maskedPhone: checkData.maskedPhone
-            });
-            setIsOtpVerified(false);
-            setPortalLoading(false);
-            return;
-          }
-        }
-        throw new Error("Invalid or inactive vendor portal link.");
-      }
-      
-      const data = await response.json();
-      setCurrentVendor(data.vendor);
-      setPortalInvoices(data.invoices);
-      setPortalHubs(data.hubs || []);
-      setPortalCompany(data.company || null);
-      setIsOtpVerified(true);
-      
-      if (data.categories) {
-        setAllCategories(data.categories);
-      }
-      
-      // Default form category to vendor's first allowed category, or fallback to Rent
-      if (data.vendor.categories && data.vendor.categories.length > 0) {
-        setPCategory(data.vendor.categories[0]);
-      } else {
-        setPCategory("Rent");
-      }
-    } catch (err: any) {
-      setPortalError(err.message || "Failed to load vendor profile.");
-    } finally {
-      setPortalLoading(false);
-    }
-  };
-
-  // Request OTP for Vendor Portal Access
-  const handleRequestOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!vendorToken || !otpPhone.trim()) return;
-    setIsRequestingOtp(true);
-    setOtpError("");
-    try {
-      const response = await fetch("/api/vendors/portal-otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: vendorToken, phone: otpPhone }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to send OTP.");
-      }
-
-      setOtpRequested(true);
-    } catch (err: any) {
-      setOtpError(err.message || "Failed to send OTP.");
-    } finally {
-      setIsRequestingOtp(false);
-    }
-  };
-
-  // Verify OTP for Vendor Portal Access
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!vendorToken || !otpPhone.trim() || !otpCode.trim()) return;
-    setIsVerifyingOtp(true);
-    setOtpError("");
-    try {
-      const response = await fetch("/api/vendors/portal-otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: vendorToken, phone: otpPhone, otp: otpCode }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Invalid OTP code.");
-      }
-
-      // Successful login
-      setCurrentVendor(data.vendor);
-      setPortalInvoices(data.invoices);
-      setPortalHubs(data.hubs || []);
-      setPortalCompany(data.company || null);
-      if (data.categories) {
-        setAllCategories(data.categories);
-      }
-      
-      // Default form category
-      if (data.vendor.categories && data.vendor.categories.length > 0) {
-        setPCategory(data.vendor.categories[0]);
-      } else {
-        setPCategory("Rent");
-      }
-
-      setIsOtpVerified(true);
-    } catch (err: any) {
-      setOtpError(err.message || "OTP verification failed.");
-    } finally {
-      setIsVerifyingOtp(false);
-    }
-  };
+  }, [isAutoRefreshEnabled]);
 
   // Fetch All Admin Data
-  const fetchAdminData = async () => {
-    setAdminLoading(true);
+  const fetchAdminData = async (mode: "initial" | "refresh" | "silent" = "refresh") => {
+    const isFirstLoad = !hasLoadedOnceRef.current;
+    if (isFirstLoad) {
+      setAdminLoading(true);
+    } else if (mode === "refresh") {
+      // Spin the refresh control only — never swap the page for a skeleton.
+      setAdminLoading(true);
+    }
     setAutoRefreshCountdown(120);
     try {
       const [vRes, iRes, sRes, cRes, aRes, hRes] = await Promise.all([
@@ -854,6 +350,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
         setArchivedVendors(aData.archivedVendors || []);
         setArchivedInvoices(aData.archivedInvoices || []);
         setHubs(hData);
+        hasLoadedOnceRef.current = true;
       }
     } catch (err) {
       console.error("Error fetching admin dashboard data:", err);
@@ -863,10 +360,9 @@ export default function App({ initialVendorToken = null }: AppProps) {
   };
 
   // Copy shareable link to clipboard
-  const handleCopyLink = (token: string) => {
-    // Portal links always use root `/` (not admin section paths)
-    const shareableLink = `${window.location.origin}/?token=${token}`;
-    
+  const handleCopyLink = (vendorToken: string) => {
+    const shareableLink = portalShareUrl(window.location.origin, vendorToken);
+
     // Copy fallback for iframe constraints
     try {
       navigator.clipboard.writeText(shareableLink);
@@ -880,7 +376,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
       document.body.removeChild(textArea);
     }
 
-    setCopiedToken(token);
+    setCopiedToken(vendorToken);
     setTimeout(() => setCopiedToken(null), 2000);
   };
 
@@ -1003,232 +499,6 @@ export default function App({ initialVendorToken = null }: AppProps) {
       setStatusSaveError(err.message || "Failed to save status.");
     } finally {
       setIsSavingStatus(false);
-    }
-  };
-
-  // Vendor Side File Reader
-  const handleVendorFile = (file: File) => {
-    setPUploadError("");
-    if (file.size > 10 * 1024 * 1024) {
-      setPUploadError("File size exceeds 10MB limit.");
-      return;
-    }
-    
-    setPSelectedFile(file);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string;
-      setPBase64File(base64);
-    };
-    reader.onerror = () => {
-      setPUploadError("Failed to read file.");
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleVendorFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  // Vendor Invoice Upload
-  const handleInvoiceSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentVendor) return;
-
-    if (!pCategory || !pInvoiceNo.trim() || !pAmount.trim() || !pDate || !pBase64File) {
-      setPUploadError("Please fill out all invoice fields and select a file.");
-      return;
-    }
-
-    const vendorStates = currentVendor.states && currentVendor.states.length > 0 
-      ? currentVendor.states 
-      : (currentVendor.state ? currentVendor.state.split(",").map(s => s.trim()).filter(s => s.length > 0) : []);
-    
-    const allStatesFromHubs = Array.from(new Set(portalHubs.map(h => h.state))).filter(Boolean);
-    const availableStates = vendorStates.length > 0 ? vendorStates : allStatesFromHubs;
-
-    if (availableStates.length > 0 && !pState) {
-      setPUploadError("Please select the operating State for this invoice.");
-      return;
-    }
-
-    const assignedHubs = portalHubs.filter(h => currentVendor.hubs?.includes(h.id));
-    const hubsForSelection = currentVendor.hubs && currentVendor.hubs.length > 0 ? assignedHubs : portalHubs;
-    const filteredHubs = pState ? hubsForSelection.filter(h => h.state === pState) : hubsForSelection;
-    if (filteredHubs.length > 0 && !pHubId) {
-      setPUploadError("Please select the regional Logistics Hub for this invoice.");
-      return;
-    }
-
-    const amt = parseFloat(pAmount);
-    if (isNaN(amt) || amt <= 0) {
-      setPUploadError("Please provide a valid billing amount.");
-      return;
-    }
-
-    setIsUploading(true);
-    setPUploadError("");
-    setPSuccessMsg(null);
-
-    try {
-      const response = await fetch("/api/invoices/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vendorId: currentVendor.id,
-          token: vendorToken,
-          category: pCategory,
-          invoiceNumber: pInvoiceNo.trim(),
-          amount: amt,
-          date: pDate,
-          fileName: pSelectedFile?.name || "invoice.pdf",
-          fileType: pSelectedFile?.type || "application/pdf",
-          fileData: pBase64File,
-          state: pState,
-          hubId: pHubId,
-          hubName: portalHubs.find(h => h.id === pHubId)?.name || "",
-          remarks: pRemarks.trim(),
-          hardCopySubmittedTo: pHardCopySubmittedTo.trim(),
-          hardCopySubmissionDate: pHardCopySubmissionDate,
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Failed to submit invoice to admin portal.");
-      }
-
-      setPSuccessMsg("Invoice uploaded successfully! Thank you.");
-      
-      // Reset Form fields
-      setPInvoiceNo("");
-      setPAmount("");
-      setPDate("");
-      setPState("");
-      setPHubId("");
-      setPRemarks("");
-      setPHardCopySubmittedTo("");
-      setPHardCopySubmissionDate("");
-      setPSelectedFile(null);
-      setPBase64File(null);
-      
-      // Reload History for Vendor
-      if (vendorToken) {
-        fetchPortalData(vendorToken);
-      }
-    } catch (err: any) {
-      setPUploadError(err.message || "Failed to complete upload.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const startEditingInvoice = (inv: any) => {
-    setEditingInvoice(inv);
-    setEditCategory(inv.category);
-    setEditInvoiceNo(inv.invoiceNumber);
-    setEditAmount(String(inv.amount));
-    setEditDate(inv.date);
-    setEditState(inv.state || "");
-    setEditHubId(inv.hubId || "");
-    setEditSelectedFile(null);
-    setEditBase64File(null);
-    setEditError("");
-  };
-
-  const handleEditFile = (file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      setEditError("File size exceeds 10MB limit.");
-      return;
-    }
-    setEditSelectedFile(file);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setEditBase64File(e.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleEditInvoiceSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingInvoice || !currentVendor) return;
-
-    if (!editCategory || !editInvoiceNo.trim() || !editAmount.trim() || !editDate) {
-      setEditError("Please fill out all invoice fields.");
-      return;
-    }
-
-    const vendorStates = currentVendor.states && currentVendor.states.length > 0 
-      ? currentVendor.states 
-      : (currentVendor.state ? currentVendor.state.split(",").map(s => s.trim()).filter(s => s.length > 0) : []);
-    
-    if (vendorStates.length > 0 && !editState) {
-      setEditError("Please select the operating State for this invoice.");
-      return;
-    }
-
-    const assignedHubs = portalHubs.filter(h => currentVendor.hubs?.includes(h.id));
-    const filteredHubs = editState ? assignedHubs.filter(h => h.state === editState) : assignedHubs;
-    if (filteredHubs.length > 0 && !editHubId) {
-      setEditError("Please select the regional Logistics Hub for this invoice.");
-      return;
-    }
-
-    const amt = parseFloat(editAmount);
-    if (isNaN(amt) || amt <= 0) {
-      setEditError("Please provide a valid billing amount.");
-      return;
-    }
-
-    setIsUpdatingInvoice(true);
-    setEditError("");
-
-    try {
-      const response = await fetch(`/api/invoices/${editingInvoice.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          category: editCategory,
-          invoiceNumber: editInvoiceNo.trim(),
-          amount: amt,
-          date: editDate,
-          state: editState,
-          hubId: editHubId,
-          hubName: portalHubs.find(h => h.id === editHubId)?.name || "",
-          fileName: editSelectedFile?.name || undefined,
-          fileType: editSelectedFile?.type || undefined,
-          fileData: editBase64File || undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Failed to update invoice.");
-      }
-
-      setEditingInvoice(null);
-      if (vendorToken) {
-        fetchPortalData(vendorToken);
-      }
-    } catch (err: any) {
-      setEditError(err.message || "Failed to update invoice.");
-    } finally {
-      setIsUpdatingInvoice(false);
     }
   };
 
@@ -1461,923 +731,6 @@ export default function App({ initialVendorToken = null }: AppProps) {
 
   const monthlyTrendData = getMonthlyTrendData();
 
-  // ================= VENDOR PORTAL RENDERING =================
-  // Any portal token keeps the UI locked to vendor portal (no admin dashboard flash).
-  if (vendorToken || initialVendorToken) {
-    if (portalLoading) {
-      return (
-        <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6">
-          <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin"></div>
-          <p className="text-sm font-medium text-slate-500 mt-4">Verifying secure billing token...</p>
-        </div>
-      );
-    }
-
-    if (portalError || (!currentVendor && !portalCheckedVendor)) {
-      return (
-        <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6 text-center">
-          <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mb-4">
-            <AlertCircle className="w-8 h-8 stroke-[1.5]" />
-          </div>
-          <h2 className="text-xl font-display font-bold text-gray-950">Invalid Access Token</h2>
-          <p className="text-sm text-gray-500 max-w-sm mt-1">
-            The billing upload URL you followed is expired, revoked, or formatted incorrectly. Please reach out to your Accounts Manager for a new portal link.
-          </p>
-        </div>
-      );
-    }
-
-    // --- RENDER OTP LOGIN SCREEN IF NOT VERIFIED ---
-    if (!isOtpVerified && portalCheckedVendor) {
-      return (
-        <div className="min-h-screen bg-slate-50/50 flex flex-col justify-center items-center p-4 relative overflow-hidden">
-          {/* Subtle background decoration */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-600 via-emerald-500 to-indigo-600 font-sans"></div>
-          
-          <div className="w-full max-w-md bg-white rounded-3xl border border-gray-100 shadow-xl p-6 sm:p-8 space-y-6 relative z-10 transition-all">
-            <div className="text-center space-y-2">
-              <div className="mx-auto w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center text-violet-600 mb-2">
-                <ShieldCheck className="w-7 h-7 stroke-[1.5]" />
-              </div>
-              <h2 className="text-xl font-display font-black text-slate-900 tracking-tight">Secure Vendor Verification</h2>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Welcome, <span className="font-bold text-slate-800">{portalCheckedVendor.name}</span>. 
-                Please verify your identity using your registered mobile number.
-              </p>
-            </div>
-
-            {otpError && (
-              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-100 text-rose-700 text-xs font-semibold leading-relaxed flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{otpError}</span>
-              </div>
-            )}
-
-            {!otpRequested ? (
-              <form onSubmit={handleRequestOtp} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    Registered Mobile Number
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 font-bold text-xs">
-                      ðŸ‡®ðŸ‡³
-                    </span>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="Enter registered phone number"
-                      value={otpPhone}
-                      onChange={(e) => setOtpPhone(e.target.value)}
-                      className="w-full text-sm pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 font-mono"
-                    />
-                  </div>
-                  <p className="text-[10px] text-slate-400">
-                    Expected registered format: <span className="font-semibold">{portalCheckedVendor.maskedPhone}</span>
-                  </p>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isRequestingOtp || !otpPhone.trim()}
-                  className="w-full py-3 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition-all shadow-md shadow-violet-500/10 flex items-center justify-center gap-2"
-                >
-                  {isRequestingOtp ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Requesting OTP...</span>
-                    </>
-                  ) : (
-                    <span>Get Verification OTP</span>
-                  )}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOtp} className="space-y-4">
-                <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-gray-100 text-xs text-slate-600">
-                  <div className="flex justify-between items-center">
-                    <span>Mobile: <strong className="text-slate-800">{otpPhone}</strong></span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOtpRequested(false);
-                        setOtpCode("");
-                        setOtpError("");
-                      }}
-                      className="text-violet-600 hover:underline font-bold text-[10px] uppercase"
-                    >
-                      Change Number
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-emerald-600 font-medium leading-none flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse inline-block"></span>
-                    OTP has been sent to your registered mobile number.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    Enter 6-Digit OTP Code
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    placeholder="Enter 6-digit OTP"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                    className="w-full text-center tracking-[0.5em] text-lg font-black font-mono py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
-                  />
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={handleRequestOtp}
-                    disabled={isRequestingOtp}
-                    className="w-1/3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs uppercase tracking-wider transition-all"
-                  >
-                    Resend
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isVerifyingOtp || otpCode.length !== 6}
-                    className="flex-1 py-3 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition-all shadow-md shadow-violet-500/10 flex items-center justify-center gap-2"
-                  >
-                    {isVerifyingOtp ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Verifying...</span>
-                      </>
-                    ) : (
-                      <span>Verify & Login</span>
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            <div className="pt-2 text-center text-[10px] text-slate-400">
-              By logging in, you agree to secure transport protocol safeguards.
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (!currentVendor) {
-      return (
-        <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6">
-          <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin"></div>
-          <p className="text-sm font-medium text-slate-500 mt-4">Preparing your vendor portal...</p>
-        </div>
-      );
-    }
-
-    return (
-      <>
-        <div id="vendor-portal-root" className="min-h-screen w-full bg-gray-50/50 flex flex-col screen-only">
-        {/* Top Navigation Bar */}
-        <nav className="bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-10 xl:px-12 shadow-sm w-full">
-          <div className="w-full max-w-[1600px] mx-auto flex h-16 justify-between items-center">
-            <div className="flex items-center gap-4">
-              <SmileLogo showText={false} />
-              <div className="h-8 w-[1.5px] bg-slate-200 hidden sm:block"></div>
-              <div className="hidden sm:block leading-none">
-                <h1 className="text-xs font-black text-slate-800 uppercase tracking-wider font-sans">
-                  Shree Maruti Integrated Logistics Limited
-                </h1>
-                <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">
-                  Secure Billing Portal
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
-                Authorized
-              </span>
-            </div>
-          </div>
-        </nav>
-
-        <div className="flex-1 w-full max-w-[1600px] mx-auto py-8 sm:py-10 px-4 sm:px-6 lg:px-10 xl:px-12 space-y-8">
-          
-          {/* Header Info Banner */}
-          <div className="bg-blue-950 rounded-2xl border border-blue-900 p-6 md:p-8 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-white">
-            <div className="space-y-1">
-              <span className="text-[10px] font-black text-blue-200 uppercase tracking-widest bg-blue-900/50 border border-blue-800 px-3 py-1 rounded-full shadow-sm">
-                Secure Vendor Billing Portal
-              </span>
-              <h1 className="text-2xl font-display font-extrabold text-white mt-1.5">{currentVendor.name}</h1>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-blue-200 mt-2">
-                <span>Email: <strong className="font-bold text-white">{currentVendor.email}</strong></span>
-                {currentVendor.phone && (
-                  <>
-                    <span className="text-blue-500 font-bold">â€¢</span>
-                    <span>Phone: <strong className="font-bold text-white">{currentVendor.phone}</strong></span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="text-left md:text-right text-xs text-blue-200 font-medium">
-              Authorized categories: 
-              <div className="flex flex-wrap gap-1 mt-1.5 justify-start md:justify-end">
-                {currentVendor.categories.map((c) => (
-                  <span key={c} className="bg-white/10 text-white border border-white/10 font-bold px-2.5 py-1 rounded-lg text-[10px] shadow-sm hover:bg-white/20 transition-all">
-                    {c}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {currentVendor.kycStatus !== "verified" && vendorToken ? (
-            <PortalKycGate
-              vendor={currentVendor}
-              vendorToken={vendorToken}
-              onVendorUpdated={(vendor) => {
-                setCurrentVendor(vendor);
-                if (vendor.kycStatus === "verified" && vendorToken) {
-                  fetchPortalData(vendorToken);
-                }
-              }}
-            />
-          ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            {/* Left Column: Primary upload + optional creator */}
-            <div className={`${portalSubMode === "generate" ? "lg:col-span-12" : "lg:col-span-7"} space-y-6`}>
-              <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                <div className="flex justify-between items-center mb-2">
-                  <h2 className="text-lg font-display font-semibold text-gray-900">Submit Invoice</h2>
-                  <span className="text-[10px] bg-violet-100 text-violet-700 font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
-                    Portal Active
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mb-6">
-                  Upload your existing tax invoice file. Invoice creator is optional if you need to generate a PDF here.
-                </p>
-
-                {pSuccessMsg && (
-                  <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-800 space-y-3">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-semibold text-sm">Action Completed Successfully!</p>
-                        <p className="text-xs text-emerald-700 mt-0.5">
-                          {pSuccessMsg}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setPSuccessMsg(null)}
-                      className="text-xs font-semibold text-emerald-800 hover:underline flex items-center gap-1"
-                    >
-                      Upload another invoice â†’
-                    </button>
-                  </div>
-                )}
-
-                {portalSubMode !== "generate" && (
-                <form onSubmit={handleInvoiceSubmit} className="space-y-4">
-                  {/* Category Picker */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Select Account Category <span className="text-red-500">*</span>
-                    </label>
-                    <ColdverseSelect
-                      value={pCategory}
-                      onValueChange={setPCategory}
-                      options={allCategories.map((cat) => ({ value: cat, label: cat }))}
-                    />
-                  </div>
-
-                  {/* State & Hub Multi-location Choice */}
-                  {(() => {
-                    const vendorStates = currentVendor?.states && currentVendor.states.length > 0 
-                      ? currentVendor.states 
-                      : (currentVendor?.state ? currentVendor.state.split(",").map(s => s.trim()).filter(s => s.length > 0) : []);
-
-                    const allStatesFromHubs = Array.from(new Set(portalHubs.map(h => h.state))).filter(Boolean);
-                    const availableStates = vendorStates.length > 0 ? vendorStates : allStatesFromHubs;
-
-                    const assignedHubs = portalHubs.filter(h => currentVendor?.hubs?.includes(h.id));
-                    const hubsForSelection = currentVendor?.hubs && currentVendor.hubs.length > 0 ? assignedHubs : portalHubs;
-                    const filteredHubs = pState 
-                      ? hubsForSelection.filter(h => h.state === pState)
-                      : hubsForSelection;
-
-                    return (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                            Operating State <span className="text-red-500">*</span>
-                          </label>
-                          <ColdverseSelect
-                            value={pState}
-                            onValueChange={(val) => {
-                              setPState(val);
-                              setPHubId("");
-                            }}
-                            placeholder="-- Select State --"
-                            options={availableStates.map((st) => ({ value: st, label: st }))}
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                            Transit Hub <span className="text-red-500">*</span>
-                          </label>
-                          <ColdverseSelect
-                            value={pHubId}
-                            onValueChange={setPHubId}
-                            disabled={!pState}
-                            placeholder={
-                              !pState
-                                ? "Select state first..."
-                                : filteredHubs.length === 0
-                                ? "No assigned hubs in this state"
-                                : "-- Select Hub --"
-                            }
-                            options={filteredHubs.map((hub) => ({
-                              value: hub.id,
-                              label: `${hub.name} (${hub.code})`,
-                            }))}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Invoice Number */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Invoice / Bill Number <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. INV/2026/07-12"
-                        value={pInvoiceNo}
-                        onChange={(e) => setPInvoiceNo(e.target.value)}
-                        className="w-full text-sm px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
-                      />
-                    </div>
-
-                    {/* Invoice Date */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Invoice Date <span className="text-red-500">*</span>
-                      </label>
-                      <ColdverseDateField
-                        value={pDate}
-                        onValueChange={setPDate}
-                        placeholder="Select invoice date"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Billing Amount */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Invoice Gross Amount (INR) <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 font-semibold text-sm">
-                          â‚¹
-                        </div>
-                        <input
-                          type="number"
-                          required
-                          min="1"
-                          placeholder="e.g. 75000"
-                          value={pAmount}
-                          onChange={(e) => setPAmount(e.target.value)}
-                          className="w-full text-sm pl-8 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Remarks / Details */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Remarks / Details (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. June services, special discounts..."
-                        value={pRemarks}
-                        onChange={(e) => setPRemarks(e.target.value)}
-                        className="w-full text-sm px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
-                      />
-                    </div>
-                  </div>
-
-                  {/* File Upload Box */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Attach Digital Invoice (PDF, JPG, PNG) <span className="text-red-500">*</span>
-                    </label>
-                    <div
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      onClick={() => document.getElementById("p-file-input")?.click()}
-                      className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
-                        isDragOver
-                          ? "border-violet-500 bg-violet-50/50"
-                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/30"
-                      }`}
-                    >
-                      <input
-                        id="p-file-input"
-                        type="file"
-                        className="hidden"
-                        accept=".pdf,image/*,.docx,.doc,.txt"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            handleVendorFile(e.target.files[0]);
-                          }
-                        }}
-                      />
-                      <div className="w-10 h-10 bg-violet-50 text-violet-600 rounded-lg flex items-center justify-center mx-auto mb-2">
-                        <Upload className="w-5 h-5" />
-                      </div>
-                      <p className="text-xs font-medium text-gray-900">
-                        {pSelectedFile ? pSelectedFile.name : "Drag & drop your invoice file here"}
-                      </p>
-                      <p className="text-[11px] text-gray-400 mt-1">
-                        {pSelectedFile
-                          ? `Size: ${(pSelectedFile.size / (1024 * 1024)).toFixed(2)} MB â€¢ Click to replace`
-                          : "Supports PDF, JPEG, PNG formats (Max 10MB)"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Hard Copy Submitted To (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Finance Desk / Hub Manager"
-                        value={pHardCopySubmittedTo}
-                        onChange={(e) => setPHardCopySubmittedTo(e.target.value)}
-                        className="w-full text-sm px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Hard Copy Submission Date
-                      </label>
-                      <ColdverseDateField
-                        value={pHardCopySubmissionDate}
-                        onValueChange={setPHardCopySubmissionDate}
-                        placeholder="Optional date"
-                      />
-                    </div>
-                  </div>
-
-                  {pUploadError && (
-                    <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{pUploadError}</span>
-                    </div>
-                  )}
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={isUploading}
-                    className="w-full bg-violet-600 text-white rounded-xl py-3 font-medium text-sm hover:bg-violet-700 transition-colors flex items-center justify-center gap-2 shadow-sm shadow-violet-500/10 disabled:opacity-60"
-                  >
-                    {isUploading ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Uploading invoice securely...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        Upload &amp; Submit Invoice
-                      </>
-                    )}
-                  </button>
-                </form>
-                )}
-
-                {/* Optional creator â€” secondary path */}
-                {vendorToken && (
-                  <div className={`${portalSubMode === "generate" ? "mt-2" : "mt-6"} border-t border-dashed border-gray-200 pt-5`}>
-                    {portalSubMode !== "generate" ? (
-                      <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-slate-500" />
-                            Need to create an invoice?
-                          </p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">
-                            Optional â€” generate a GST tax invoice PDF with templates, then submit it from here.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPortalSubMode("generate");
-                            setPUploadError("");
-                            setPSuccessMsg(null);
-                          }}
-                          className="shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 cursor-pointer"
-                        >
-                          Open invoice creator
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-semibold text-slate-800">Invoice creator</p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPortalSubMode("upload");
-                              setPUploadError("");
-                            }}
-                            className="text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
-                          >
-                            â† Back to upload
-                          </button>
-                        </div>
-                        <PortalInvoiceGenerator
-                          vendor={currentVendor}
-                          vendorToken={vendorToken}
-                          categories={allCategories}
-                          portalHubs={portalHubs}
-                          company={portalCompany}
-                          onSuccess={(message) => {
-                            setPSuccessMsg(message);
-                            setPUploadError("");
-                            setPortalSubMode("upload");
-                            if (vendorToken) fetchPortalData(vendorToken);
-                          }}
-                          onError={(message) => setPUploadError(message)}
-                          onClose={() => setPortalSubMode("upload")}
-                        />
-                        {pUploadError && portalSubMode === "generate" && (
-                          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4 shrink-0" />
-                            <span>{pUploadError}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right Column: Portal Upload History */}
-            {portalSubMode !== "generate" && (
-            <div className="lg:col-span-5 space-y-6">
-              <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm flex flex-col justify-between h-full min-h-[400px]">
-                <div>
-                  <div className="flex justify-between items-start mb-4 gap-2">
-                    <div>
-                      <h3 className="text-base font-display font-semibold text-gray-900 mb-1">Upload History</h3>
-                      <p className="text-xs text-gray-500">Historical record of invoices submitted by you.</p>
-                    </div>
-                    {portalInvoices.length > 0 && (
-                      <button
-                        onClick={() => exportInvoicesToExcel(
-                          portalInvoices,
-                          currentVendor ? [currentVendor] : [],
-                          portalHubs,
-                          `SMILe_${currentVendor?.name || "Vendor"}_Submitted_Invoices_${new Date().toISOString().split('T')[0]}.xlsx`
-                        )}
-                        className="flex items-center gap-1 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg transition-all cursor-pointer shadow-sm hover:shadow hover:scale-[1.01] active:scale-[0.99] shrink-0"
-                        title="Export submitted invoices to Excel"
-                      >
-                        <Download className="w-3 h-3" />
-                        Export to Excel
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="space-y-3 overflow-y-auto max-h-[360px] pr-1">
-                    {portalInvoices.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center text-center py-12 text-gray-400">
-                        <Inbox className="w-8 h-8 text-gray-300 stroke-[1.5] mb-2" />
-                        <p className="text-xs font-medium">No previous invoices uploaded</p>
-                        <p className="text-[10px] mt-0.5">Submit your first monthly invoice using the wizard.</p>
-                      </div>
-                    ) : (
-                      portalInvoices
-                        .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
-                        .map((inv) => (
-                          <div key={inv.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1">
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="font-semibold text-gray-800 truncate max-w-[120px]" title={inv.invoiceNumber}>
-                                {inv.invoiceNumber}
-                              </span>
-                              <span className="font-semibold font-mono text-gray-900">
-                                {formatCurrency(inv.amount)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center text-[10px] text-gray-500">
-                              <span>Date: {inv.date}</span>
-                              <span className={`px-2 py-0.2 rounded-full border ${getCategoryBadgeClass(inv.category)}`}>
-                                {inv.category}
-                              </span>
-                            </div>
-
-                            {/* State and Hub selection display */}
-                            {(inv.state || inv.hubName) && (
-                              <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                {inv.state && (
-                                  <span className="bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded">
-                                    State: {inv.state}
-                                  </span>
-                                )}
-                                {inv.hubName && (
-                                  <span className="bg-violet-50 text-violet-700 text-[9px] font-medium px-1.5 py-0.5 rounded">
-                                    Hub: {inv.hubName}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Status and remarks */}
-                            <div className="flex flex-col gap-1 border-t border-gray-100/60 pt-1.5 mt-1.5">
-                              <div className="flex justify-between items-center text-[10px]">
-                                <span className="text-gray-400 font-medium">Status:</span>
-                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
-                                  inv.status === "Paid"
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                    : inv.status === "Hold"
-                                    ? "bg-amber-50 text-amber-700 border-amber-100"
-                                    : inv.status === "Rejected"
-                                    ? "bg-rose-50 text-rose-700 border-rose-100"
-                                    : "bg-blue-50 text-blue-700 border-blue-100"
-                                }`}>
-                                  {inv.status || "Pending"}
-                                </span>
-                              </div>
-                              {inv.remarks && (
-                                <div className="text-[10px] text-gray-600 bg-gray-50 p-1.5 rounded-lg border border-gray-100/80 mt-1">
-                                  <strong className="font-semibold text-gray-700">Remarks:</strong> {inv.remarks}
-                                </div>
-                              )}
-                            </div>
-
-                            <p className="text-[9px] font-mono text-gray-400 truncate mt-1 font-semibold">
-                              File: {inv.fileName}
-                            </p>
-                            <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-2 border-t border-gray-100/60 pt-2">
-                              <a
-                                href={`/api/invoices/download/${inv.id}`}
-                                className="text-[10px] text-violet-600 hover:text-violet-700 font-semibold flex items-center gap-1 hover:underline"
-                              >
-                                <Download className="w-3 h-3" />
-                                Download File
-                              </a>
-                              <button
-                                onClick={() => handlePrintInvoice(inv)}
-                                className="text-[10px] text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
-                              >
-                                <Printer className="w-3 h-3" />
-                                Print Invoice
-                              </button>
-                              <button
-                                onClick={() => handlePrintChallan(inv)}
-                                className="text-[10px] text-violet-600 hover:text-violet-700 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
-                              >
-                                <FileCheck className="w-3 h-3 text-violet-500" />
-                                Print Challan
-                              </button>
-                              {inv.status !== "Paid" && (
-                                <button
-                                  onClick={() => startEditingInvoice(inv)}
-                                  className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
-                                >
-                                  <Pencil className="w-3 h-3 text-blue-500" />
-                                  Edit Details
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                    )}
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-gray-100 mt-6 flex justify-between items-center text-[10px] text-gray-400">
-                  <span>Authorized Link</span>
-                  <span>SSL Encrypted Transport</span>
-                </div>
-              </div>
-            </div>
-            )}
-          </div>
-          )}
-        </div>
-      </div>
-      
-      {editingInvoice && (
-        <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-sm z-50 overflow-y-auto flex justify-center items-start md:items-center p-4 py-8 md:py-12 screen-only">
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8 shadow-xl w-full max-w-xl my-auto animate-fade-in relative">
-            <button 
-              type="button"
-              onClick={() => setEditingInvoice(null)}
-              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <h2 className="text-lg font-display font-bold text-gray-950 mb-1">Edit Submitted Invoice</h2>
-            <p className="text-xs text-gray-500 mb-6">Modify details for Invoice: <strong className="text-gray-700">{editingInvoice.invoiceNumber}</strong></p>
-
-            <form onSubmit={handleEditInvoiceSubmit} className="space-y-4">
-              {/* Edit Category */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Select Account Category <span className="text-red-500">*</span>
-                </label>
-                <ColdverseSelect
-                  value={editCategory}
-                  onValueChange={setEditCategory}
-                  options={allCategories.map((cat) => ({ value: cat, label: cat }))}
-                />
-              </div>
-
-              {/* Edit State & Hub Multi-location Choice */}
-              {(() => {
-                const vendorStates = currentVendor?.states && currentVendor.states.length > 0 
-                  ? currentVendor.states 
-                  : (currentVendor?.state ? currentVendor.state.split(",").map(s => s.trim()).filter(s => s.length > 0) : []);
-
-                const assignedHubs = portalHubs.filter(h => currentVendor?.hubs?.includes(h.id));
-                const filteredHubs = editState 
-                  ? assignedHubs.filter(h => h.state === editState)
-                  : assignedHubs;
-
-                if (vendorStates.length > 0) {
-                  return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                          Operating State <span className="text-red-500">*</span>
-                        </label>
-                        <ColdverseSelect
-                          value={editState}
-                          onValueChange={(val) => {
-                            setEditState(val);
-                            setEditHubId("");
-                          }}
-                          placeholder="-- Select State --"
-                          options={vendorStates.map((st) => ({ value: st, label: st }))}
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                          Transit Hub <span className="text-red-500">*</span>
-                        </label>
-                        <ColdverseSelect
-                          value={editHubId}
-                          onValueChange={setEditHubId}
-                          disabled={!editState}
-                          placeholder={
-                            !editState
-                              ? "Select state first..."
-                              : filteredHubs.length === 0
-                              ? "No assigned hubs in this state"
-                              : "-- Select Hub --"
-                          }
-                          options={filteredHubs.map((hub) => ({
-                            value: hub.id,
-                            label: `${hub.name} (${hub.code})`,
-                          }))}
-                        />
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Edit Invoice Number */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Invoice / Bill Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editInvoiceNo}
-                    onChange={(e) => setEditInvoiceNo(e.target.value)}
-                    className="w-full text-sm px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
-                  />
-                </div>
-
-                {/* Edit Invoice Date */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Invoice Date <span className="text-red-500">*</span>
-                  </label>
-                  <ColdverseDateField
-                    value={editDate}
-                    onValueChange={setEditDate}
-                    placeholder="Select invoice date"
-                  />
-                </div>
-              </div>
-
-              {/* Edit Billing Amount */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Invoice Gross Amount (INR) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 font-semibold text-sm">
-                    â‚¹
-                  </div>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={editAmount}
-                    onChange={(e) => setEditAmount(e.target.value)}
-                    className="w-full text-sm pl-8 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
-                  />
-                </div>
-              </div>
-
-              {/* Edit Optional File Box */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Replace Attached Invoice (Optional)
-                </label>
-                <input
-                  type="file"
-                  accept=".pdf,image/*,.docx,.doc,.txt"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      handleEditFile(e.target.files[0]);
-                    }
-                  }}
-                  className="w-full text-xs text-gray-500 border border-gray-200 rounded-xl p-2 bg-gray-50/30 focus:outline-none"
-                />
-                <p className="text-[10px] text-gray-400">
-                  Current file: <span className="font-semibold text-gray-600">{editingInvoice.fileName}</span>. Only upload if you want to replace it.
-                </p>
-              </div>
-
-              {editError && (
-                <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{editError}</span>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex gap-3 justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingInvoice(null)}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 font-semibold rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isUpdatingInvoice}
-                  className="px-6 py-2 bg-violet-600 text-white text-sm font-semibold rounded-xl hover:bg-violet-700 disabled:opacity-60 shadow-sm"
-                >
-                  {isUpdatingInvoice ? "Saving changes..." : "Save Changes"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      
-      {renderPrintAndPreview()}
-    </>
-    );
-  }
-
   // ================= ADMIN CONSOLE RENDERING =================
   return (
     <>
@@ -2450,8 +803,13 @@ export default function App({ initialVendorToken = null }: AppProps) {
               <Link
                 key={item.tab}
                 href={item.href}
-                onClick={() => setActiveTab(item.tab)}
-                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-all shrink-0 relative ${
+                scroll={false}
+                prefetch
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigateToTab(item.tab);
+                }}
+                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-colors shrink-0 relative ${
                   activeTab === item.tab
                     ? "bg-orange-600 text-white shadow-sm"
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
@@ -2468,8 +826,13 @@ export default function App({ initialVendorToken = null }: AppProps) {
             ))}
             <Link
               href="/archive"
-              onClick={() => setActiveTab("archive")}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-all shrink-0 ${
+              scroll={false}
+              prefetch
+              onClick={(e) => {
+                e.preventDefault();
+                navigateToTab("archive");
+              }}
+              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-colors shrink-0 ${
                 activeTab === "archive"
                   ? "bg-orange-600 text-white shadow-sm"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
@@ -2846,7 +1209,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
           </div>
         )}
 
-        {/* Tab 1: Analytics Dashboard View */}
+        {/* Dashboard remounts on visit (Chart.js needs a real layout box); other tabs stay mounted. */}
         {activeTab === "dashboard" && (
           <DashboardView
             stats={dynamicStats}
@@ -2860,91 +1223,97 @@ export default function App({ initialVendorToken = null }: AppProps) {
           />
         )}
 
-        {/* Tab 2: Vendor List View */}
-        {activeTab === "vendors" && (
-          <VendorsView
-            hubFilteredVendors={hubFilteredVendors}
-            filteredVendors={filteredVendors}
-            hubs={hubs}
-            headerHubFilter={headerHubFilter}
-            vendorSearch={vendorSearch}
-            onVendorSearchChange={setVendorSearch}
-            vendorViewMode={vendorViewMode}
-            onVendorViewModeChange={setVendorViewMode}
-            copiedToken={copiedToken}
-            onCopyLink={handleCopyLink}
-            onEditVendor={setEditingVendor}
-            onDeleteVendor={(id, name) => openDeleteModal(id, "vendor", name)}
-            onOpenCategoryModal={() => {
-              setCategoryModalError("");
-              setCategoryModalSuccess("");
-              setShowCategoryModal(true);
-            }}
-            onOpenBulkUpload={() => setShowBulkUploadModal(true)}
-            onOpenAddVendor={() => setShowSingleVendorModal(true)}
-          />
+        {visitedTabs.has("vendors") && (
+          <div hidden={activeTab !== "vendors"} className={activeTab === "vendors" ? undefined : "hidden"}>
+            <VendorsView
+              hubFilteredVendors={hubFilteredVendors}
+              filteredVendors={filteredVendors}
+              hubs={hubs}
+              headerHubFilter={headerHubFilter}
+              vendorSearch={vendorSearch}
+              onVendorSearchChange={setVendorSearch}
+              vendorViewMode={vendorViewMode}
+              onVendorViewModeChange={setVendorViewMode}
+              copiedToken={copiedToken}
+              onCopyLink={handleCopyLink}
+              onEditVendor={setEditingVendor}
+              onDeleteVendor={(id, name) => openDeleteModal(id, "vendor", name)}
+              onOpenCategoryModal={() => {
+                setCategoryModalError("");
+                setCategoryModalSuccess("");
+                setShowCategoryModal(true);
+              }}
+              onOpenBulkUpload={() => setShowBulkUploadModal(true)}
+              onOpenAddVendor={() => setShowSingleVendorModal(true)}
+            />
+          </div>
         )}
 
-        {/* Tab: KYC Approvals */}
-        {activeTab === "kyc" && (
-          <KycView vendors={vendors} onRefresh={fetchAdminData} />
+        {visitedTabs.has("kyc") && (
+          <div hidden={activeTab !== "kyc"} className={activeTab === "kyc" ? undefined : "hidden"}>
+            <KycView vendors={vendors} onRefresh={() => fetchAdminData("silent")} />
+          </div>
         )}
 
-        {/* Tab 3: Invoice Logs View */}
-        {activeTab === "invoices" && (
-          <InvoicesView
-            filteredInvoices={filteredInvoices}
-            hubScopedInvoices={hubScopedInvoices}
-            vendors={vendors}
-            hubs={hubs}
-            allCategories={allCategories}
-            invoiceSearch={invoiceSearch}
-            onInvoiceSearchChange={setInvoiceSearch}
-            invoiceCategoryFilter={invoiceCategoryFilter}
-            onInvoiceCategoryFilterChange={setInvoiceCategoryFilter}
-            onEditStatus={(inv) => {
-              setStatusEditInvoice(inv);
-              setEditStatusValue(inv.status || "Pending");
-              setEditRemarksValue(inv.remarks || "");
-              setStatusSaveError("");
-            }}
-            onPrintInvoice={handlePrintInvoice}
-            onPrintChallan={handlePrintChallan}
-            onDeleteInvoice={(id, label) => openDeleteModal(id, "invoice", label)}
-          />
+        {visitedTabs.has("invoices") && (
+          <div hidden={activeTab !== "invoices"} className={activeTab === "invoices" ? undefined : "hidden"}>
+            <InvoicesView
+              filteredInvoices={filteredInvoices}
+              hubScopedInvoices={hubScopedInvoices}
+              vendors={vendors}
+              hubs={hubs}
+              allCategories={allCategories}
+              invoiceSearch={invoiceSearch}
+              onInvoiceSearchChange={setInvoiceSearch}
+              invoiceCategoryFilter={invoiceCategoryFilter}
+              onInvoiceCategoryFilterChange={setInvoiceCategoryFilter}
+              onEditStatus={(inv) => {
+                setStatusEditInvoice(inv);
+                setEditStatusValue(inv.status || "Pending");
+                setEditRemarksValue(inv.remarks || "");
+                setStatusSaveError("");
+              }}
+              onPrintInvoice={handlePrintInvoice}
+              onPrintChallan={handlePrintChallan}
+              onDeleteInvoice={(id, label) => openDeleteModal(id, "invoice", label)}
+            />
+          </div>
         )}
 
-        {/* Tab: Remarks & Summary Highlight Hub */}
-        {activeTab === "remarks" && (
-          <RemarksView
-            invoices={invoices}
-            invoiceSearch={invoiceSearch}
-            onInvoiceSearchChange={setInvoiceSearch}
-            matchesHeaderHubInvoice={matchesHeaderHubInvoice}
-            onEditStatus={(inv) => {
-              setStatusEditInvoice(inv);
-              setEditStatusValue(inv.status || "Pending");
-              setEditRemarksValue(inv.remarks || "");
-              setStatusSaveError("");
-            }}
-            onPrintInvoice={handlePrintInvoice}
-          />
+        {visitedTabs.has("remarks") && (
+          <div hidden={activeTab !== "remarks"} className={activeTab === "remarks" ? undefined : "hidden"}>
+            <RemarksView
+              invoices={invoices}
+              invoiceSearch={invoiceSearch}
+              onInvoiceSearchChange={setInvoiceSearch}
+              matchesHeaderHubInvoice={matchesHeaderHubInvoice}
+              onEditStatus={(inv) => {
+                setStatusEditInvoice(inv);
+                setEditStatusValue(inv.status || "Pending");
+                setEditRemarksValue(inv.remarks || "");
+                setStatusSaveError("");
+              }}
+              onPrintInvoice={handlePrintInvoice}
+            />
+          </div>
         )}
 
-        {/* Tab: Logistics Hubs View */}
-        {activeTab === "hubs" && (
-          <HubsView vendors={vendors} onHubsUpdated={fetchAdminData} />
+        {visitedTabs.has("hubs") && (
+          <div hidden={activeTab !== "hubs"} className={activeTab === "hubs" ? undefined : "hidden"}>
+            <HubsView vendors={vendors} onHubsUpdated={() => fetchAdminData("silent")} />
+          </div>
         )}
 
-        {/* Tab 4: Archive View */}
-        {activeTab === "archive" && (
-          <ArchiveView
-            archivedVendors={archivedVendors}
-            archivedInvoices={archivedInvoices}
-            archiveSearch={archiveSearch}
-            onArchiveSearchChange={setArchiveSearch}
-            onRestore={handleRestoreItem}
-          />
+        {visitedTabs.has("archive") && (
+          <div hidden={activeTab !== "archive"} className={activeTab === "archive" ? undefined : "hidden"}>
+            <ArchiveView
+              archivedVendors={archivedVendors}
+              archivedInvoices={archivedInvoices}
+              archiveSearch={archiveSearch}
+              onArchiveSearchChange={setArchiveSearch}
+              onRestore={handleRestoreItem}
+            />
+          </div>
         )}
       </main>
     </div>

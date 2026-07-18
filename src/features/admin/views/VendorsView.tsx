@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { Hub, Vendor } from "@/src/types";
 import { exportVendorsToExcel } from "@/src/utils/excelExport";
+import { portalShareUrl } from "@/src/constants/portalRoutes";
 
 const VENDOR_CARD_COLORS = [
   { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-150", accent: "bg-orange-500", light: "bg-orange-500/10", tagBg: "bg-orange-50 text-orange-700 border-orange-100" },
@@ -257,7 +258,7 @@ export default function VendorsView({
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredVendors.map((vendor, index) => {
             const theme = colorsList[index % colorsList.length];
-            const shareLink = `${window.location.origin}/?token=${vendor.token}`;
+            const shareLink = portalShareUrl(window.location.origin, vendor.token);
             const initials = vendor.name ? vendor.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() : "V";
 
             return (
@@ -445,7 +446,7 @@ export default function VendorsView({
           <tbody className="bg-white divide-y divide-gray-100">
             {filteredVendors.map((vendor, index) => {
               const theme = colorsList[index % colorsList.length];
-              const shareLink = `${window.location.origin}/?token=${vendor.token}`;
+              const shareLink = portalShareUrl(window.location.origin, vendor.token);
               return (
                 <tr key={vendor.id} className="hover:bg-gray-50/30 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">

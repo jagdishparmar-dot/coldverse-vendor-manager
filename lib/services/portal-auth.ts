@@ -140,3 +140,17 @@ export async function getVerifiedPortalData(token: string) {
 
   return getPortalPayload(vendor.id);
 }
+
+export async function logoutPortalSession(token: string) {
+  if (!token) {
+    throw new ServiceError(400, "Token is required.");
+  }
+
+  await prisma.portalSession.deleteMany({ where: { token } });
+  await prisma.portalOtp.deleteMany({ where: { token } });
+
+  return {
+    success: true,
+    message: "Logged out of vendor portal session.",
+  };
+}
