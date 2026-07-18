@@ -199,3 +199,39 @@ body {
     @apply font-sans;
   }
 }
+
+@keyframes status-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes status-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.status-screen-rise {
+  animation: status-rise 0.55s ease-out both;
+}
+
+.status-screen-soft {
+  animation: status-soft 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-screen-rise,
+  .status-screen-soft {
+    animation: none;
+  }
+}
