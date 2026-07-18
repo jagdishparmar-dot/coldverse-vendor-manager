@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -38,11 +38,8 @@ import {
 import { Vendor, Invoice, Hub, CompanyProfile } from "./types";
 import BulkUpload from "./components/BulkUpload";
 import VendorForm from "./components/VendorForm";
-import DashboardStats from "./components/DashboardStats";
-import HubsManagement from "./components/HubsManagement";
 import PortalKycGate from "./components/PortalKycGate";
 import PortalInvoiceGenerator from "./components/PortalInvoiceGenerator";
-import AdminKycTab from "./components/AdminKycTab";
 import { SmileLogo } from "./components/Logo";
 import { exportInvoicesToExcel, exportVendorsToExcel } from "./utils/excelExport";
 import { ColdverseSelect } from "@/src/components/coldverse-select";
@@ -56,6 +53,17 @@ import {
   tabFromPathname,
   type AdminTab,
 } from "@/src/constants/adminRoutes";
+import {
+  DashboardView,
+  HubsView,
+  KycView,
+  ArchiveView,
+  RemarksView,
+} from "@/src/features/admin/views";
+import {
+  formatCurrency,
+  getCategoryBadgeClass,
+} from "@/src/features/admin/utils";
 
 const MONTH_FILTER_OPTIONS = [
   { value: "All", label: "All Months" },
@@ -85,7 +93,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Routing State based on URL Search Query Token — seed from URL so portal never flashes admin UI
+  // Routing State based on URL Search Query Token â€” seed from URL so portal never flashes admin UI
   const [vendorToken, setVendorToken] = useState<string | null>(initialVendorToken);
   const [allCategories, setAllCategories] = useState<string[]>(ALL_CATEGORIES);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -648,7 +656,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
   const [pHardCopySubmittedTo, setPHardCopySubmittedTo] = useState("");
   const [pHardCopySubmissionDate, setPHardCopySubmissionDate] = useState("");
 
-  // Parse Token on Mount — portal links must never load admin data or UI
+  // Parse Token on Mount â€” portal links must never load admin data or UI
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token") || initialVendorToken;
@@ -1222,27 +1230,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
     }
   };
 
-  // Helper colors for badges
-  const getCategoryBadgeClass = (category: string) => {
-    const badges: Record<string, string> = {
-      Rent: "bg-blue-50 text-blue-700 border-blue-100",
-      Manpower: "bg-violet-50 text-violet-700 border-violet-100",
-      "Vehicle rent": "bg-amber-50 text-amber-700 border-amber-100",
-      "Repairs & maintenance": "bg-emerald-50 text-emerald-700 border-emerald-100",
-      Electricity: "bg-rose-50 text-rose-700 border-rose-100",
-      Others: "bg-gray-50 text-gray-700 border-gray-100",
-    };
-    return badges[category] || "bg-gray-50 text-gray-700 border-gray-100";
-  };
-
-  // Format monetary value to Indian format
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(val);
-  };
+  // Category / currency helpers live in @/src/features/admin/utils
 
   const matchesHeaderHubInvoice = (inv: Invoice) =>
     headerHubFilter === "All" || inv.hubId === headerHubFilter;
@@ -1531,7 +1519,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
                   </label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 font-bold text-xs">
-                      🇮🇳
+                      ðŸ‡®ðŸ‡³
                     </span>
                     <input
                       type="tel"
@@ -1688,7 +1676,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
                 <span>Email: <strong className="font-bold text-white">{currentVendor.email}</strong></span>
                 {currentVendor.phone && (
                   <>
-                    <span className="text-blue-500 font-bold">•</span>
+                    <span className="text-blue-500 font-bold">â€¢</span>
                     <span>Phone: <strong className="font-bold text-white">{currentVendor.phone}</strong></span>
                   </>
                 )}
@@ -1749,7 +1737,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
                       onClick={() => setPSuccessMsg(null)}
                       className="text-xs font-semibold text-emerald-800 hover:underline flex items-center gap-1"
                     >
-                      Upload another invoice →
+                      Upload another invoice â†’
                     </button>
                   </div>
                 )}
@@ -1862,7 +1850,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 font-semibold text-sm">
-                          ₹
+                          â‚¹
                         </div>
                         <input
                           type="number"
@@ -1926,7 +1914,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
                       </p>
                       <p className="text-[11px] text-gray-400 mt-1">
                         {pSelectedFile
-                          ? `Size: ${(pSelectedFile.size / (1024 * 1024)).toFixed(2)} MB • Click to replace`
+                          ? `Size: ${(pSelectedFile.size / (1024 * 1024)).toFixed(2)} MB â€¢ Click to replace`
                           : "Supports PDF, JPEG, PNG formats (Max 10MB)"}
                       </p>
                     </div>
@@ -1988,7 +1976,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
                 </form>
                 )}
 
-                {/* Optional creator — secondary path */}
+                {/* Optional creator â€” secondary path */}
                 {vendorToken && (
                   <div className={`${portalSubMode === "generate" ? "mt-2" : "mt-6"} border-t border-dashed border-gray-200 pt-5`}>
                     {portalSubMode !== "generate" ? (
@@ -1999,7 +1987,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
                             Need to create an invoice?
                           </p>
                           <p className="text-[11px] text-slate-500 mt-0.5">
-                            Optional — generate a GST tax invoice PDF with templates, then submit it from here.
+                            Optional â€” generate a GST tax invoice PDF with templates, then submit it from here.
                           </p>
                         </div>
                         <button
@@ -2026,7 +2014,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
                             }}
                             className="text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
                           >
-                            ← Back to upload
+                            â† Back to upload
                           </button>
                         </div>
                         <PortalInvoiceGenerator
@@ -2321,7 +2309,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 font-semibold text-sm">
-                    ₹
+                    â‚¹
                   </div>
                   <input
                     type="number"
@@ -2858,9 +2846,9 @@ export default function App({ initialVendorToken = null }: AppProps) {
 
         {/* Tab 1: Analytics Dashboard View */}
         {activeTab === "dashboard" && (
-          <DashboardStats 
-            stats={dynamicStats} 
-            loading={adminLoading} 
+          <DashboardView
+            stats={dynamicStats}
+            loading={adminLoading}
             monthlyTrend={monthlyTrendData}
             statusKPIs={statusKPIs}
             onStatusClick={(status) => {
@@ -3119,7 +3107,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
                                   <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Operating State</span>
                                   {vendor.state ? (
                                     <span className="text-[11px] font-extrabold text-gray-800 bg-orange-50 text-orange-700 border border-orange-100 px-2.5 py-0.5 rounded-md">
-                                      📍 {vendor.state}
+                                      ðŸ“ {vendor.state}
                                     </span>
                                   ) : (
                                     <span className="text-[10px] text-gray-400 italic">No State selected</span>
@@ -3291,7 +3279,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
                                   )}
                                   {vendor.state ? (
                                     <span className="text-gray-700 mt-1 font-semibold text-[11px]">
-                                      📍 {vendor.state}
+                                      ðŸ“ {vendor.state}
                                     </span>
                                   ) : (
                                     <span className="text-gray-400 italic text-[11px]">No State</span>
@@ -3397,7 +3385,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
 
         {/* Tab: KYC Approvals */}
         {activeTab === "kyc" && (
-          <AdminKycTab vendors={vendors} onRefresh={fetchAdminData} />
+          <KycView vendors={vendors} onRefresh={fetchAdminData} />
         )}
 
         {/* Tab 3: Invoice Logs View */}
@@ -3593,350 +3581,36 @@ export default function App({ initialVendorToken = null }: AppProps) {
         )}
 
         {/* Tab: Remarks & Summary Highlight Hub */}
-        {activeTab === "remarks" && (() => {
-          const invoicesWithRemarks = invoices.filter(inv =>
-            inv.remarks &&
-            inv.remarks.trim().length > 0 &&
-            !inv.archived &&
-            matchesHeaderHubInvoice(inv)
-          );
-          
-          // Filter by search
-          const filteredRemarksList = invoicesWithRemarks.filter(inv => {
-            const query = invoiceSearch.toLowerCase();
-            return (
-              inv.vendorName.toLowerCase().includes(query) ||
-              inv.invoiceNumber.toLowerCase().includes(query) ||
-              inv.remarks.toLowerCase().includes(query) ||
-              inv.category.toLowerCase().includes(query)
-            );
-          });
-
-          const holdCount = invoicesWithRemarks.filter(inv => inv.status === "Hold").length;
-          const rejectedCount = invoicesWithRemarks.filter(inv => inv.status === "Rejected").length;
-          const paidCount = invoicesWithRemarks.filter(inv => inv.status === "Paid").length;
-          const pendingCount = invoicesWithRemarks.filter(inv => !inv.status || inv.status === "Pending").length;
-
-          return (
-            <div className="space-y-6">
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Flagged Remarks</div>
-                  <div className="text-2xl font-black text-gray-900">{invoicesWithRemarks.length}</div>
-                  <p className="text-[10px] text-gray-500 mt-1">Invoices with summary notes</p>
-                </div>
-                <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100 shadow-sm">
-                  <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Hold Remarks</div>
-                  <div className="text-2xl font-black text-amber-700">{holdCount}</div>
-                  <p className="text-[10px] text-amber-600 mt-1">Awaiting corrections/approvals</p>
-                </div>
-                <div className="bg-rose-50/50 p-5 rounded-2xl border border-rose-100 shadow-sm">
-                  <div className="text-[10px] font-bold text-rose-600 uppercase tracking-wider mb-1">Rejected Remarks</div>
-                  <div className="text-2xl font-black text-rose-700">{rejectedCount}</div>
-                  <p className="text-[10px] text-rose-600 mt-1">Invoices flagged as returned/denied</p>
-                </div>
-                <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100 shadow-sm">
-                  <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Cleared / Paid Summary</div>
-                  <div className="text-2xl font-black text-emerald-700">{paidCount}</div>
-                  <p className="text-[10px] text-emerald-600 mt-1">Resolved notes & payments</p>
-                </div>
-              </div>
-
-              {/* Controls bar */}
-              <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-base font-display font-semibold text-gray-900">Flagged Invoices & Remarks</h3>
-                  <p className="text-xs text-gray-500">Highlighting all invoices with active summaries, notes, and remarks.</p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="relative w-64">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                      <Search className="w-4 h-4" />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Search remarks, vendors, INV no..."
-                      value={invoiceSearch}
-                      onChange={(e) => setInvoiceSearch(e.target.value)}
-                      className="w-full text-xs pl-9 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Remarks Cards Grid */}
-              {filteredRemarksList.length === 0 ? (
-                <div className="bg-white p-12 text-center rounded-2xl border border-gray-100 shadow-sm text-gray-400">
-                  <Inbox className="w-12 h-12 stroke-[1.2] mx-auto mb-3 text-gray-300" />
-                  <p className="text-sm font-medium">No active remarks match your criteria</p>
-                  <p className="text-xs mt-1">Try resetting the search query above.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredRemarksList.map((inv) => {
-                    const statusClass = 
-                      inv.status === "Paid"
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                        : inv.status === "Hold"
-                        ? "bg-amber-50 text-amber-700 border-amber-100"
-                        : inv.status === "Rejected"
-                        ? "bg-rose-50 text-rose-700 border-rose-100"
-                        : "bg-blue-50 text-blue-700 border-blue-100";
-
-                    return (
-                      <div key={inv.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-violet-200 transition-all flex flex-col justify-between">
-                        <div className="space-y-3">
-                          {/* Top Header */}
-                          <div className="flex justify-between items-start gap-3">
-                            <div>
-                              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">{inv.category}</h4>
-                              <h3 className="text-sm font-bold text-gray-900 mt-0.5">{inv.vendorName}</h3>
-                              <p className="text-[10px] text-gray-500 font-mono">Invoice: <span className="font-semibold">{inv.invoiceNumber}</span> • {inv.date}</p>
-                            </div>
-                            <div className="text-right flex flex-col items-end gap-1.5">
-                              <span className="text-sm font-mono font-bold text-gray-950">{formatCurrency(inv.amount)}</span>
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider border ${statusClass}`}>
-                                {inv.status || "Pending"}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Remarks Highlight Box (MANDATORY REQUEST) */}
-                          <div className={`p-4 rounded-xl border ${
-                            inv.status === "Hold" 
-                              ? "bg-amber-50/40 border-amber-100 text-amber-900" 
-                              : inv.status === "Rejected" 
-                              ? "bg-rose-50/40 border-rose-100 text-rose-950" 
-                              : "bg-slate-50 border-gray-100 text-slate-800"
-                          }`}>
-                            <div className="flex items-center gap-1.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
-                              <span>Invoice Summary & Remarks</span>
-                            </div>
-                            <p className="text-xs font-medium leading-relaxed font-sans">{inv.remarks}</p>
-                          </div>
-
-                          {/* State & Hub location footer badge if present */}
-                          {(inv.state || inv.hubName) && (
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                              {inv.state && (
-                                <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded font-medium">
-                                  State: {inv.state}
-                                </span>
-                              )}
-                              {inv.hubName && (
-                                <span className="bg-violet-50 text-violet-700 text-[10px] px-2 py-0.5 rounded font-medium">
-                                  Hub: {inv.hubName}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Action buttons footer */}
-                        <div className="flex items-center justify-between gap-2 mt-5 pt-3 border-t border-gray-100/60 text-xs">
-                          <button
-                            onClick={() => {
-                              setStatusEditInvoice(inv);
-                              setEditStatusValue(inv.status || "Pending");
-                              setEditRemarksValue(inv.remarks || "");
-                              setStatusSaveError("");
-                            }}
-                            className="text-violet-600 hover:text-violet-700 font-bold hover:underline flex items-center gap-1"
-                          >
-                            <Pencil className="w-3 h-3" />
-                            Update Summary / Status
-                          </button>
-
-                          <div className="flex items-center gap-3">
-                            <a
-                              href={`/api/invoices/download/${inv.id}`}
-                              className="text-gray-500 hover:text-violet-600 font-semibold flex items-center gap-1"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                              Get File
-                            </a>
-                            <button
-                              onClick={() => handlePrintInvoice(inv)}
-                              className="text-gray-500 hover:text-emerald-600 font-semibold flex items-center gap-1 cursor-pointer"
-                            >
-                              <Printer className="w-3.5 h-3.5" />
-                              Print
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })()}
+        {activeTab === "remarks" && (
+          <RemarksView
+            invoices={invoices}
+            invoiceSearch={invoiceSearch}
+            onInvoiceSearchChange={setInvoiceSearch}
+            matchesHeaderHubInvoice={matchesHeaderHubInvoice}
+            onEditStatus={(inv) => {
+              setStatusEditInvoice(inv);
+              setEditStatusValue(inv.status || "Pending");
+              setEditRemarksValue(inv.remarks || "");
+              setStatusSaveError("");
+            }}
+            onPrintInvoice={handlePrintInvoice}
+          />
+        )}
 
         {/* Tab: Logistics Hubs View */}
         {activeTab === "hubs" && (
-          <HubsManagement vendors={vendors} onHubsUpdated={fetchAdminData} />
+          <HubsView vendors={vendors} onHubsUpdated={fetchAdminData} />
         )}
 
         {/* Tab 4: Archive View */}
         {activeTab === "archive" && (
-          <div className="space-y-6">
-            {/* Header / Info Card */}
-            <div className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2.5 bg-violet-50 rounded-xl">
-                  <Archive className="w-5 h-5 text-violet-600" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-gray-900">System Archive Center</h2>
-                  <p className="text-xs text-gray-500">
-                    Track all deleted vendors and invoices. You can view their deletion remarks and restore them to active status at any time.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Archive Search Bar */}
-            <div className="bg-white border border-gray-100 p-4 rounded-2xl shadow-sm">
-              <div className="relative max-w-md">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                  <Search className="w-4 h-4" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search archive by name, invoice number, remarks..."
-                  value={archiveSearch}
-                  onChange={(e) => setArchiveSearch(e.target.value)}
-                  className="w-full text-xs pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 bg-gray-50/50"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Archived Vendors Panel */}
-              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-                <div className="bg-gray-50/80 px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-gray-500" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">Archived Vendors ({archivedVendors.length})</h3>
-                  </div>
-                </div>
-
-                <div className="p-4 flex-1">
-                  {archivedVendors.length === 0 ? (
-                    <div className="text-center py-12 text-gray-400 text-xs font-medium">
-                      <Archive className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                      No archived vendors found.
-                    </div>
-                  ) : (
-                    <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-                      {archivedVendors
-                        .filter(v => 
-                          v.name.toLowerCase().includes(archiveSearch.toLowerCase()) ||
-                          v.email.toLowerCase().includes(archiveSearch.toLowerCase()) ||
-                          (v.deletionRemarks || "").toLowerCase().includes(archiveSearch.toLowerCase())
-                        )
-                        .map(vendor => (
-                          <div key={vendor.id} className="p-4 border border-gray-150 rounded-xl bg-gray-50/30 hover:bg-gray-50/80 transition-all space-y-3">
-                            <div className="flex justify-between items-start gap-3">
-                              <div>
-                                <h4 className="text-xs font-bold text-gray-900">{vendor.name}</h4>
-                                <p className="text-[10px] text-gray-400 font-mono">{vendor.email}</p>
-                              </div>
-                              <button
-                                onClick={() => handleRestoreItem("vendor", vendor.id)}
-                                className="px-3 py-1.5 bg-violet-50 text-violet-600 hover:bg-violet-100 border border-violet-100 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
-                              >
-                                <RefreshCw className="w-3 h-3" />
-                                Restore
-                              </button>
-                            </div>
-
-                            <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-2.5 text-[10px] text-amber-900 leading-normal">
-                              <span className="font-semibold block uppercase tracking-wider text-[8px] text-amber-700 mb-0.5">Deletion Remarks:</span>
-                              {vendor.deletionRemarks || "No remarks provided"}
-                            </div>
-
-                            <div className="flex justify-between items-center text-[9px] text-gray-400 border-t border-gray-100 pt-2 font-mono">
-                              <span>Archived: {vendor.archivedAt ? new Date(vendor.archivedAt).toLocaleString() : "N/A"}</span>
-                              <span>Categories: {vendor.categories.join(", ")}</span>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Archived Invoices Panel */}
-              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-                <div className="bg-gray-50/80 px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-gray-500" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">Archived Invoices ({archivedInvoices.length})</h3>
-                  </div>
-                </div>
-
-                <div className="p-4 flex-1">
-                  {archivedInvoices.length === 0 ? (
-                    <div className="text-center py-12 text-gray-400 text-xs font-medium">
-                      <Archive className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                      No archived invoices found.
-                    </div>
-                  ) : (
-                    <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-                      {archivedInvoices
-                        .filter(inv => 
-                          (inv.invoiceNumber || "").toLowerCase().includes(archiveSearch.toLowerCase()) ||
-                          inv.vendorName.toLowerCase().includes(archiveSearch.toLowerCase()) ||
-                          inv.category.toLowerCase().includes(archiveSearch.toLowerCase()) ||
-                          (inv.deletionRemarks || "").toLowerCase().includes(archiveSearch.toLowerCase())
-                        )
-                        .map(inv => (
-                          <div key={inv.id} className="p-4 border border-gray-150 rounded-xl bg-gray-50/30 hover:bg-gray-50/80 transition-all space-y-3">
-                            <div className="flex justify-between items-start gap-3">
-                              <div>
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <h4 className="text-xs font-bold text-gray-900">
-                                    {inv.invoiceNumber ? `Inv: ${inv.invoiceNumber}` : `No: ${inv.id.substring(0,8)}`}
-                                  </h4>
-                                  <span className="text-[9px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-semibold">
-                                    {inv.category}
-                                  </span>
-                                </div>
-                                <p className="text-[10px] text-gray-500 font-medium mt-0.5">{inv.vendorName}</p>
-                              </div>
-                              <div className="text-right flex flex-col items-end gap-1.5 font-sans">
-                                <span className="text-xs font-extrabold text-gray-900">₹{inv.amount.toLocaleString("en-IN")}</span>
-                                <button
-                                  onClick={() => handleRestoreItem("invoice", inv.id)}
-                                  className="px-3 py-1.5 bg-violet-50 text-violet-600 hover:bg-violet-100 border border-violet-100 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
-                                >
-                                  <RefreshCw className="w-3 h-3" />
-                                  Restore
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-2.5 text-[10px] text-amber-900 leading-normal">
-                              <span className="font-semibold block uppercase tracking-wider text-[8px] text-amber-700 mb-0.5">Deletion Remarks:</span>
-                              {inv.deletionRemarks || "No remarks provided"}
-                            </div>
-
-                            <div className="flex justify-between items-center text-[9px] text-gray-400 border-t border-gray-100 pt-2 font-mono">
-                              <span>Archived: {inv.archivedAt ? new Date(inv.archivedAt).toLocaleString() : "N/A"}</span>
-                              <span>File: {inv.fileName}</span>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          <ArchiveView
+            archivedVendors={archivedVendors}
+            archivedInvoices={archivedInvoices}
+            archiveSearch={archiveSearch}
+            onArchiveSearchChange={setArchiveSearch}
+            onRestore={handleRestoreItem}
+          />
         )}
       </main>
     </div>
