@@ -158,12 +158,15 @@ docker run -p 3000:3000 \
 |----------|---------|-------------|
 | `RUN_DB_MIGRATIONS` | `true` | Run `prisma migrate deploy` before starting the app |
 | `SEED_ADMIN_ON_STARTUP` | `false` | Create bootstrap admin if no users exist (requires `SEED_ADMIN_*`) |
+| `PG_POOL_MAX` | `5` | Max Postgres connections per app container (raise only if DB `max_connections` allows) |
 | `PORT` | `3000` | HTTP port (Coolify usually sets this automatically) |
 | `HOSTNAME` | `0.0.0.0` | Bind address for Next.js |
 
 Set `RUN_DB_MIGRATIONS=false` after the first deploy if you prefer to run migrations manually.
 
 Set `SEED_ADMIN_ON_STARTUP=true` on the **first deploy only**, then turn it off. The seed is idempotent (skips if any user already exists).
+
+If logs show `Too many database connections` / Prisma `P2037`, set `PG_POOL_MAX=3` (or restart Postgres to clear leaked sessions), redeploy this app, and avoid running multiple app replicas against a tiny DB without raising Postgres `max_connections`.
 
 ### Coolify checklist
 

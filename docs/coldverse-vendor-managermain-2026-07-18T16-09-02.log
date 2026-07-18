@@ -1,0 +1,621 @@
+2026-07-18T16:01:34.086865007Z [startup] Running Prisma migrations (RUN_DB_MIGRATIONS=true)...
+2026-07-18T16:01:35.548528188Z Loaded Prisma config from prisma.config.ts.
+2026-07-18T16:01:35.548574158Z 
+2026-07-18T16:01:35.609773168Z Prisma schema loaded from prisma/schema.prisma.
+2026-07-18T16:01:35.612995503Z Datasource "db": PostgreSQL database "cldv_vendors", schema "public" at "mo4gsc88ww0wcswkwcggco4s:5432"
+2026-07-18T16:01:35.684567200Z 
+2026-07-18T16:01:35.684600590Z 5 migrations found in prisma/migrations
+2026-07-18T16:01:35.684605670Z 
+2026-07-18T16:01:35.750613258Z 
+2026-07-18T16:01:35.751102779Z No pending migrations to apply.
+2026-07-18T16:01:35.775128948Z npm notice
+2026-07-18T16:01:35.775151838Z npm notice New major version of npm available! 10.8.2 -> 12.0.1
+2026-07-18T16:01:35.775173688Z npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.1
+2026-07-18T16:01:35.775177608Z npm notice To update run: npm install -g npm@12.0.1
+2026-07-18T16:01:35.775181218Z npm notice
+2026-07-18T16:01:35.784634774Z [startup] Skipping admin seed (SEED_ADMIN_ON_STARTUP=false).
+2026-07-18T16:01:35.784663734Z [startup] Starting Next.js on port 3000...
+2026-07-18T16:01:35.931046303Z 
+2026-07-18T16:01:35.931080503Z > next-app@0.1.0 start
+2026-07-18T16:01:35.931085113Z > next start
+2026-07-18T16:01:35.931088873Z 
+2026-07-18T16:01:36.262095675Z ▲ Next.js 16.2.10
+2026-07-18T16:01:36.262308415Z - Local:         http://localhost:3000
+2026-07-18T16:01:36.262325905Z - Network:       http://10.0.1.11:3000
+2026-07-18T16:01:36.262715375Z ✓ Ready in 188ms
+2026-07-18T16:01:36.322543153Z ⚠ Found lockfile missing swc dependencies, patching...
+2026-07-18T16:01:37.775201106Z ⚠ Lockfile was successfully patched, please run "npm install" to ensure @next/swc dependencies are downloaded
+2026-07-18T16:08:05.457846384Z 2026-07-18T16:08:05.455Z ERROR [Better Auth]: Failed to query fallback join for model user: {
+2026-07-18T16:08:05.457930904Z   where: [
+2026-07-18T16:08:05.457938794Z     {
+2026-07-18T16:08:05.457944314Z       operator: 'eq',
+2026-07-18T16:08:05.457949554Z       connector: 'AND',
+2026-07-18T16:08:05.457954484Z       field: 'id',
+2026-07-18T16:08:05.457960234Z       value: 'dCY3OVdAgXmwPqGu12QNVGdzVpbslDen',
+2026-07-18T16:08:05.457965624Z       mode: 'sensitive'
+2026-07-18T16:08:05.457970864Z     }
+2026-07-18T16:08:05.457975834Z   ],
+2026-07-18T16:08:05.457981255Z   limit: 1
+2026-07-18T16:08:05.457986084Z }
+2026-07-18T16:08:05.466256765Z Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:05.466339965Z Invalid `prisma.user.findFirst()` invocation:
+2026-07-18T16:08:05.466345485Z 
+2026-07-18T16:08:05.466349415Z 
+2026-07-18T16:08:05.466353785Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:05.466357565Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163) {
+2026-07-18T16:08:05.466361555Z   code: 'P2037',
+2026-07-18T16:08:05.466365345Z   meta: {
+2026-07-18T16:08:05.466368995Z     modelName: 'User',
+2026-07-18T16:08:05.466372525Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:05.466376285Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:05.466379895Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:05.466383305Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:05.466386905Z       [cause]: [Object]
+2026-07-18T16:08:05.466390155Z     }
+2026-07-18T16:08:05.466393625Z   },
+2026-07-18T16:08:05.466397015Z   clientVersion: '7.8.0'
+2026-07-18T16:08:05.466400425Z }
+2026-07-18T16:08:05.467303666Z 2026-07-18T16:08:05.466Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:05.467330446Z Invalid `prisma.user.findFirst()` invocation:
+2026-07-18T16:08:05.467336456Z 
+2026-07-18T16:08:05.467341776Z 
+2026-07-18T16:08:05.467348006Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:05.467354676Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163) {
+2026-07-18T16:08:05.467361036Z   code: 'P2037',
+2026-07-18T16:08:05.467366686Z   meta: {
+2026-07-18T16:08:05.467371656Z     modelName: 'User',
+2026-07-18T16:08:05.467377446Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:05.467383596Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:05.467388446Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:05.467393366Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:05.467399306Z       [cause]: [Object]
+2026-07-18T16:08:05.467405336Z     }
+2026-07-18T16:08:05.467423136Z   },
+2026-07-18T16:08:05.467428446Z   clientVersion: '7.8.0'
+2026-07-18T16:08:05.467433716Z }
+2026-07-18T16:08:05.469108289Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:05.469144759Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:05.469176169Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:05.469181859Z   headers: {},
+2026-07-18T16:08:05.469184759Z   statusCode: 500
+2026-07-18T16:08:05.469188349Z }
+2026-07-18T16:08:05.498488658Z 2026-07-18T16:08:05.497Z ERROR [Better Auth]: Failed to query fallback join for model user: {
+2026-07-18T16:08:05.499569499Z   where: [
+2026-07-18T16:08:05.499580619Z     {
+2026-07-18T16:08:05.499585909Z       operator: 'eq',
+2026-07-18T16:08:05.499590649Z       connector: 'AND',
+2026-07-18T16:08:05.499595339Z       field: 'id',
+2026-07-18T16:08:05.499600079Z       value: 'dCY3OVdAgXmwPqGu12QNVGdzVpbslDen',
+2026-07-18T16:08:05.499604759Z       mode: 'sensitive'
+2026-07-18T16:08:05.499609389Z     }
+2026-07-18T16:08:05.499614179Z   ],
+2026-07-18T16:08:05.499624659Z   limit: 1
+2026-07-18T16:08:05.499629279Z }
+2026-07-18T16:08:05.499640589Z Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:05.499645789Z Invalid `prisma.user.findFirst()` invocation:
+2026-07-18T16:08:05.499650569Z 
+2026-07-18T16:08:05.499655109Z 
+2026-07-18T16:08:05.499659779Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:05.499664719Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163) {
+2026-07-18T16:08:05.499669399Z   code: 'P2037',
+2026-07-18T16:08:05.499674089Z   meta: {
+2026-07-18T16:08:05.499679409Z     modelName: 'User',
+2026-07-18T16:08:05.499684179Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:05.499689399Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:05.499695679Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:05.499700779Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:05.499706129Z       [cause]: [Object]
+2026-07-18T16:08:05.499710659Z     }
+2026-07-18T16:08:05.499715049Z   },
+2026-07-18T16:08:05.499719449Z   clientVersion: '7.8.0'
+2026-07-18T16:08:05.499723909Z }
+2026-07-18T16:08:05.499973169Z 2026-07-18T16:08:05.498Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:05.499989189Z Invalid `prisma.user.findFirst()` invocation:
+2026-07-18T16:08:05.499995759Z 
+2026-07-18T16:08:05.500000909Z 
+2026-07-18T16:08:05.500005969Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:05.500010989Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163) {
+2026-07-18T16:08:05.500028699Z   code: 'P2037',
+2026-07-18T16:08:05.500032189Z   meta: {
+2026-07-18T16:08:05.500035339Z     modelName: 'User',
+2026-07-18T16:08:05.500062419Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:05.500066129Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:05.500069419Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:05.500072749Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:05.500076219Z       [cause]: [Object]
+2026-07-18T16:08:05.500079689Z     }
+2026-07-18T16:08:05.500083039Z   },
+2026-07-18T16:08:05.500086849Z   clientVersion: '7.8.0'
+2026-07-18T16:08:05.500090449Z }
+2026-07-18T16:08:05.501456882Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:05.501482752Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:05.501488912Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:05.501494152Z   headers: {},
+2026-07-18T16:08:05.501498842Z   statusCode: 500
+2026-07-18T16:08:05.501503532Z }
+2026-07-18T16:08:05.502606073Z 2026-07-18T16:08:05.502Z ERROR [Better Auth]: Failed to query fallback join for model user: {
+2026-07-18T16:08:05.502637543Z   where: [
+2026-07-18T16:08:05.502644313Z     {
+2026-07-18T16:08:05.502649573Z       operator: 'eq',
+2026-07-18T16:08:05.502654993Z       connector: 'AND',
+2026-07-18T16:08:05.502660013Z       field: 'id',
+2026-07-18T16:08:05.502665053Z       value: 'dCY3OVdAgXmwPqGu12QNVGdzVpbslDen',
+2026-07-18T16:08:05.502670043Z       mode: 'sensitive'
+2026-07-18T16:08:05.502675123Z     }
+2026-07-18T16:08:05.502680133Z   ],
+2026-07-18T16:08:05.502685583Z   limit: 1
+2026-07-18T16:08:05.502690683Z }
+2026-07-18T16:08:05.503806324Z Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:05.504597206Z Invalid `prisma.user.findFirst()` invocation:
+2026-07-18T16:08:05.504609816Z 
+2026-07-18T16:08:05.504615406Z 
+2026-07-18T16:08:05.504620545Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:05.504625796Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163) {
+2026-07-18T16:08:05.504631185Z   code: 'P2037',
+2026-07-18T16:08:05.504636145Z   meta: {
+2026-07-18T16:08:05.504641256Z     modelName: 'User',
+2026-07-18T16:08:05.504656536Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:05.504660345Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:05.504664105Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:05.504667736Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:05.504671276Z       [cause]: [Object]
+2026-07-18T16:08:05.504674796Z     }
+2026-07-18T16:08:05.504678256Z   },
+2026-07-18T16:08:05.504681745Z   clientVersion: '7.8.0'
+2026-07-18T16:08:05.504685225Z }
+2026-07-18T16:08:05.504694806Z 2026-07-18T16:08:05.503Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:05.504698665Z Invalid `prisma.user.findFirst()` invocation:
+2026-07-18T16:08:05.504894065Z 
+2026-07-18T16:08:05.505315637Z 
+2026-07-18T16:08:05.505324687Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:05.505330337Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163) {
+2026-07-18T16:08:05.505335857Z   code: 'P2037',
+2026-07-18T16:08:05.505340717Z   meta: {
+2026-07-18T16:08:05.505345867Z     modelName: 'User',
+2026-07-18T16:08:05.505351017Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:05.505356317Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:05.505361547Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:05.505366747Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:05.505371787Z       [cause]: [Object]
+2026-07-18T16:08:05.505433527Z     }
+2026-07-18T16:08:05.505442737Z   },
+2026-07-18T16:08:05.505448267Z   clientVersion: '7.8.0'
+2026-07-18T16:08:05.505453407Z }
+2026-07-18T16:08:05.505460937Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:05.505466347Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:05.505471667Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:05.505476867Z   headers: {},
+2026-07-18T16:08:05.505482017Z   statusCode: 500
+2026-07-18T16:08:05.505487167Z }
+2026-07-18T16:08:05.520112936Z 2026-07-18T16:08:05.519Z ERROR [Better Auth]: Failed to query fallback join for model user: {
+2026-07-18T16:08:05.520171696Z   where: [
+2026-07-18T16:08:05.520181245Z     {
+2026-07-18T16:08:05.520187005Z       operator: 'eq',
+2026-07-18T16:08:05.520207315Z       connector: 'AND',
+2026-07-18T16:08:05.520211096Z       field: 'id',
+2026-07-18T16:08:05.520214826Z       value: 'dCY3OVdAgXmwPqGu12QNVGdzVpbslDen',
+2026-07-18T16:08:05.520218515Z       mode: 'sensitive'
+2026-07-18T16:08:05.520222245Z     }
+2026-07-18T16:08:05.520226405Z   ],
+2026-07-18T16:08:05.520230005Z   limit: 1
+2026-07-18T16:08:05.520303676Z }
+2026-07-18T16:08:05.522579869Z Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:05.522659009Z Invalid `prisma.user.findFirst()` invocation:
+2026-07-18T16:08:05.522667459Z 
+2026-07-18T16:08:05.522675079Z 
+2026-07-18T16:08:05.522685989Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:05.522714289Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163) {
+2026-07-18T16:08:05.522720639Z   code: 'P2037',
+2026-07-18T16:08:05.522726169Z   meta: {
+2026-07-18T16:08:05.522732039Z     modelName: 'User',
+2026-07-18T16:08:05.522737579Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:05.522742869Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:05.522748259Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:05.522753829Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:05.522767259Z       [cause]: [Object]
+2026-07-18T16:08:05.522773029Z     }
+2026-07-18T16:08:05.522778459Z   },
+2026-07-18T16:08:05.522783809Z   clientVersion: '7.8.0'
+2026-07-18T16:08:05.522789209Z }
+2026-07-18T16:08:05.524639482Z 2026-07-18T16:08:05.523Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:05.524706042Z Invalid `prisma.user.findFirst()` invocation:
+2026-07-18T16:08:05.524712582Z 
+2026-07-18T16:08:05.524719402Z 
+2026-07-18T16:08:05.524724952Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:05.524729812Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163) {
+2026-07-18T16:08:05.524735042Z   code: 'P2037',
+2026-07-18T16:08:05.524746952Z   meta: {
+2026-07-18T16:08:05.524751802Z     modelName: 'User',
+2026-07-18T16:08:05.524787532Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:05.524793142Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:05.524798462Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:05.524826062Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:05.524831632Z       [cause]: [Object]
+2026-07-18T16:08:05.524835762Z     }
+2026-07-18T16:08:05.524839352Z   },
+2026-07-18T16:08:05.524842612Z   clientVersion: '7.8.0'
+2026-07-18T16:08:05.524845902Z }
+2026-07-18T16:08:05.525108582Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:05.525178952Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:05.525187512Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:05.525192222Z   headers: {},
+2026-07-18T16:08:05.525196092Z   statusCode: 500
+2026-07-18T16:08:05.525199882Z }
+2026-07-18T16:08:45.507321541Z 2026-07-18T16:08:45.506Z ERROR [Better Auth]: Failed to query fallback join for model user: {
+2026-07-18T16:08:45.507396371Z   where: [
+2026-07-18T16:08:45.507406931Z     {
+2026-07-18T16:08:45.507413751Z       operator: 'eq',
+2026-07-18T16:08:45.507418861Z       connector: 'AND',
+2026-07-18T16:08:45.507438551Z       field: 'id',
+2026-07-18T16:08:45.507443351Z       value: 'ZAGoJdwHZLupYbqu4rNJFJ2mTS02Zjoo',
+2026-07-18T16:08:45.507448042Z       mode: 'sensitive'
+2026-07-18T16:08:45.507452751Z     }
+2026-07-18T16:08:45.507457362Z   ],
+2026-07-18T16:08:45.507461981Z   limit: 1
+2026-07-18T16:08:45.507466661Z }
+2026-07-18T16:08:45.508688563Z Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:45.508755713Z Invalid `prisma.user.findFirst()` invocation:
+2026-07-18T16:08:45.508767273Z 
+2026-07-18T16:08:45.508775974Z 
+2026-07-18T16:08:45.508782284Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:45.508801033Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163) {
+2026-07-18T16:08:45.508807824Z   code: 'P2037',
+2026-07-18T16:08:45.508813414Z   meta: {
+2026-07-18T16:08:45.508818364Z     modelName: 'User',
+2026-07-18T16:08:45.508822513Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:45.508826633Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:45.508830833Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:45.508835014Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:45.508839824Z       [cause]: [Object]
+2026-07-18T16:08:45.508848134Z     }
+2026-07-18T16:08:45.508869884Z   },
+2026-07-18T16:08:45.508874444Z   clientVersion: '7.8.0'
+2026-07-18T16:08:45.508880424Z }
+2026-07-18T16:08:45.509430744Z 2026-07-18T16:08:45.508Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:45.509588774Z Invalid `prisma.user.findFirst()` invocation:
+2026-07-18T16:08:45.509596134Z 
+2026-07-18T16:08:45.509600314Z 
+2026-07-18T16:08:45.509604144Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:45.509609174Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163) {
+2026-07-18T16:08:45.509616644Z   code: 'P2037',
+2026-07-18T16:08:45.509625324Z   meta: {
+2026-07-18T16:08:45.509630744Z     modelName: 'User',
+2026-07-18T16:08:45.509636014Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:45.509641134Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:45.509646284Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:45.509651594Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:45.509656844Z       [cause]: [Object]
+2026-07-18T16:08:45.509661634Z     }
+2026-07-18T16:08:45.509666214Z   },
+2026-07-18T16:08:45.509670824Z   clientVersion: '7.8.0'
+2026-07-18T16:08:45.509675404Z }
+2026-07-18T16:08:45.510693955Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:45.510717585Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:45.510722595Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:45.510726865Z   headers: {},
+2026-07-18T16:08:45.510730815Z   statusCode: 500
+2026-07-18T16:08:45.510734665Z }
+2026-07-18T16:08:45.539480833Z 2026-07-18T16:08:45.537Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:45.539537173Z Invalid `prisma.session.findFirst()` invocation:
+2026-07-18T16:08:45.539542963Z 
+2026-07-18T16:08:45.539547133Z 
+2026-07-18T16:08:45.539550893Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:45.539554783Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163)
+2026-07-18T16:08:45.539558763Z     at async Object.findSession (.next/server/chunks/[root-of-the-server]__18pgid7._.js:114:18846)
+2026-07-18T16:08:45.539562793Z     at async (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:88725)
+2026-07-18T16:08:45.539566613Z     at async o (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:4510) {
+2026-07-18T16:08:45.539589263Z   code: 'P2037',
+2026-07-18T16:08:45.539592093Z   meta: {
+2026-07-18T16:08:45.539594993Z     modelName: 'Session',
+2026-07-18T16:08:45.539597673Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:45.539600613Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:45.539603293Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:45.539605863Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:45.539608553Z       [cause]: [Object]
+2026-07-18T16:08:45.539611913Z     }
+2026-07-18T16:08:45.539614473Z   },
+2026-07-18T16:08:45.539617313Z   clientVersion: '7.8.0'
+2026-07-18T16:08:45.539619993Z }
+2026-07-18T16:08:45.540141703Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:45.540204053Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:45.540213324Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:45.540218764Z   headers: {},
+2026-07-18T16:08:45.540223973Z   statusCode: 500
+2026-07-18T16:08:45.540235313Z }
+2026-07-18T16:08:47.647418799Z 2026-07-18T16:08:47.646Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:47.647479569Z Invalid `prisma.session.findFirst()` invocation:
+2026-07-18T16:08:47.647487879Z 
+2026-07-18T16:08:47.647493819Z 
+2026-07-18T16:08:47.647499039Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:47.647504489Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163)
+2026-07-18T16:08:47.647509579Z     at async Object.findSession (.next/server/chunks/[root-of-the-server]__18pgid7._.js:114:18846)
+2026-07-18T16:08:47.647514569Z     at async (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:88725)
+2026-07-18T16:08:47.647519679Z     at async o (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:4510) {
+2026-07-18T16:08:47.647524929Z   code: 'P2037',
+2026-07-18T16:08:47.647530039Z   meta: {
+2026-07-18T16:08:47.647535039Z     modelName: 'Session',
+2026-07-18T16:08:47.647540239Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:47.647545199Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:47.647550869Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:47.647556250Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:47.647562020Z       [cause]: [Object]
+2026-07-18T16:08:47.647582190Z     }
+2026-07-18T16:08:47.647586090Z   },
+2026-07-18T16:08:47.647589610Z   clientVersion: '7.8.0'
+2026-07-18T16:08:47.647592970Z }
+2026-07-18T16:08:47.648220270Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:47.648469611Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:47.648481661Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:47.648492550Z   headers: {},
+2026-07-18T16:08:47.648504301Z   statusCode: 500
+2026-07-18T16:08:47.648516040Z }
+2026-07-18T16:08:47.779088660Z 2026-07-18T16:08:47.778Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:47.779467000Z Invalid `prisma.session.findFirst()` invocation:
+2026-07-18T16:08:47.779478230Z 
+2026-07-18T16:08:47.779483160Z 
+2026-07-18T16:08:47.779487209Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:47.779491080Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163)
+2026-07-18T16:08:47.779495430Z     at async Object.findSession (.next/server/chunks/[root-of-the-server]__18pgid7._.js:114:18846)
+2026-07-18T16:08:47.779499230Z     at async (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:88725)
+2026-07-18T16:08:47.779502940Z     at async o (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:4510) {
+2026-07-18T16:08:47.779506809Z   code: 'P2037',
+2026-07-18T16:08:47.779510510Z   meta: {
+2026-07-18T16:08:47.779514160Z     modelName: 'Session',
+2026-07-18T16:08:47.779517830Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:47.779522060Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:47.779530620Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:47.779536849Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:47.779540670Z       [cause]: [Object]
+2026-07-18T16:08:47.779544350Z     }
+2026-07-18T16:08:47.779548040Z   },
+2026-07-18T16:08:47.779551809Z   clientVersion: '7.8.0'
+2026-07-18T16:08:47.779555529Z }
+2026-07-18T16:08:47.779728430Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:47.779754220Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:47.779760340Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:47.779765971Z   headers: {},
+2026-07-18T16:08:47.779771081Z   statusCode: 500
+2026-07-18T16:08:47.779776021Z }
+2026-07-18T16:08:47.796040811Z 2026-07-18T16:08:47.795Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:47.796107792Z Invalid `prisma.session.findFirst()` invocation:
+2026-07-18T16:08:47.796112082Z 
+2026-07-18T16:08:47.796115122Z 
+2026-07-18T16:08:47.796117922Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:47.796120572Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163)
+2026-07-18T16:08:47.796123182Z     at async Object.findSession (.next/server/chunks/[root-of-the-server]__18pgid7._.js:114:18846)
+2026-07-18T16:08:47.796125782Z     at async (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:88725)
+2026-07-18T16:08:47.796128342Z     at async o (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:4510) {
+2026-07-18T16:08:47.796130932Z   code: 'P2037',
+2026-07-18T16:08:47.796133642Z   meta: {
+2026-07-18T16:08:47.796136322Z     modelName: 'Session',
+2026-07-18T16:08:47.796138852Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:47.796141452Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:47.796144032Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:47.796146642Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:47.796149222Z       [cause]: [Object]
+2026-07-18T16:08:47.796151752Z     }
+2026-07-18T16:08:47.796170192Z   },
+2026-07-18T16:08:47.796172882Z   clientVersion: '7.8.0'
+2026-07-18T16:08:47.796175462Z }
+2026-07-18T16:08:47.796854762Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:47.796896272Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:47.796900792Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:47.796905002Z   headers: {},
+2026-07-18T16:08:47.796908612Z   statusCode: 500
+2026-07-18T16:08:47.796912132Z }
+2026-07-18T16:08:47.800300887Z 2026-07-18T16:08:47.799Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:47.800335197Z Invalid `prisma.session.findFirst()` invocation:
+2026-07-18T16:08:47.800339847Z 
+2026-07-18T16:08:47.800343557Z 
+2026-07-18T16:08:47.800346897Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:47.800350627Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163)
+2026-07-18T16:08:47.800354167Z     at async Object.findSession (.next/server/chunks/[root-of-the-server]__18pgid7._.js:114:18846)
+2026-07-18T16:08:47.800357517Z     at async (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:88725)
+2026-07-18T16:08:47.800373887Z     at async o (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:4510) {
+2026-07-18T16:08:47.800377817Z   code: 'P2037',
+2026-07-18T16:08:47.800381387Z   meta: {
+2026-07-18T16:08:47.800384987Z     modelName: 'Session',
+2026-07-18T16:08:47.800388807Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:47.800392547Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:47.800396217Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:47.800399667Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:47.800402947Z       [cause]: [Object]
+2026-07-18T16:08:47.800406107Z     }
+2026-07-18T16:08:47.800409247Z   },
+2026-07-18T16:08:47.800412537Z   clientVersion: '7.8.0'
+2026-07-18T16:08:47.800415807Z }
+2026-07-18T16:08:47.800869137Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:47.800883257Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:47.800886947Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:47.800890397Z   headers: {},
+2026-07-18T16:08:47.800894168Z   statusCode: 500
+2026-07-18T16:08:47.800897787Z }
+2026-07-18T16:08:47.802490670Z 2026-07-18T16:08:47.801Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:47.802518860Z Invalid `prisma.session.findFirst()` invocation:
+2026-07-18T16:08:47.802522760Z 
+2026-07-18T16:08:47.802526070Z 
+2026-07-18T16:08:47.802529080Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:47.802532610Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163)
+2026-07-18T16:08:47.802536150Z     at async Object.findSession (.next/server/chunks/[root-of-the-server]__18pgid7._.js:114:18846)
+2026-07-18T16:08:47.802539370Z     at async (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:88725)
+2026-07-18T16:08:47.802542460Z     at async o (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:4510) {
+2026-07-18T16:08:47.802545810Z   code: 'P2037',
+2026-07-18T16:08:47.802548980Z   meta: {
+2026-07-18T16:08:47.802552660Z     modelName: 'Session',
+2026-07-18T16:08:47.802556280Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:47.802559790Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:47.802563470Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:47.802566490Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:47.802579610Z       [cause]: [Object]
+2026-07-18T16:08:47.802582550Z     }
+2026-07-18T16:08:47.802585050Z   },
+2026-07-18T16:08:47.802587640Z   clientVersion: '7.8.0'
+2026-07-18T16:08:47.802590150Z }
+2026-07-18T16:08:47.803066490Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:47.803092350Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:47.803097120Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:47.803101650Z   headers: {},
+2026-07-18T16:08:47.803105120Z   statusCode: 500
+2026-07-18T16:08:47.803108670Z }
+2026-07-18T16:08:47.844393053Z 2026-07-18T16:08:47.843Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:47.844458984Z Invalid `prisma.session.findFirst()` invocation:
+2026-07-18T16:08:47.844464384Z 
+2026-07-18T16:08:47.844467864Z 
+2026-07-18T16:08:47.844470944Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:47.844474144Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163)
+2026-07-18T16:08:47.844477384Z     at async Object.findSession (.next/server/chunks/[root-of-the-server]__18pgid7._.js:114:18846)
+2026-07-18T16:08:47.844480693Z     at async (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:88725)
+2026-07-18T16:08:47.844483914Z     at async o (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:4510) {
+2026-07-18T16:08:47.844487484Z   code: 'P2037',
+2026-07-18T16:08:47.844491164Z   meta: {
+2026-07-18T16:08:47.844494764Z     modelName: 'Session',
+2026-07-18T16:08:47.844498474Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:47.844501074Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:47.844503604Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:47.844506133Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:47.844508684Z       [cause]: [Object]
+2026-07-18T16:08:47.844511144Z     }
+2026-07-18T16:08:47.844513693Z   },
+2026-07-18T16:08:47.844516274Z   clientVersion: '7.8.0'
+2026-07-18T16:08:47.844518794Z }
+2026-07-18T16:08:47.844997735Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:47.845017845Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:47.845021185Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:47.845023905Z   headers: {},
+2026-07-18T16:08:47.845042775Z   statusCode: 500
+2026-07-18T16:08:47.845045885Z }
+2026-07-18T16:08:47.870842458Z 2026-07-18T16:08:47.869Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:47.870885728Z Invalid `prisma.session.findFirst()` invocation:
+2026-07-18T16:08:47.870889948Z 
+2026-07-18T16:08:47.870892738Z 
+2026-07-18T16:08:47.870895368Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:47.870897968Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163)
+2026-07-18T16:08:47.870900978Z     at async Object.findSession (.next/server/chunks/[root-of-the-server]__18pgid7._.js:114:18846)
+2026-07-18T16:08:47.870903828Z     at async (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:88725)
+2026-07-18T16:08:47.870906408Z     at async o (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:4510) {
+2026-07-18T16:08:47.870909718Z   code: 'P2037',
+2026-07-18T16:08:47.870913928Z   meta: {
+2026-07-18T16:08:47.870917818Z     modelName: 'Session',
+2026-07-18T16:08:47.870921328Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:47.870925128Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:47.870928518Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:47.870931988Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:47.870935448Z       [cause]: [Object]
+2026-07-18T16:08:47.870939358Z     }
+2026-07-18T16:08:47.870943318Z   },
+2026-07-18T16:08:47.870946968Z   clientVersion: '7.8.0'
+2026-07-18T16:08:47.870950268Z }
+2026-07-18T16:08:47.871753269Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:47.871778419Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:47.871782199Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:47.871785209Z   headers: {},
+2026-07-18T16:08:47.871788089Z   statusCode: 500
+2026-07-18T16:08:47.871790909Z }
+2026-07-18T16:08:47.891172064Z 2026-07-18T16:08:47.889Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:47.891231444Z Invalid `prisma.session.findFirst()` invocation:
+2026-07-18T16:08:47.891236564Z 
+2026-07-18T16:08:47.891240414Z 
+2026-07-18T16:08:47.891243884Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:47.891247534Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163)
+2026-07-18T16:08:47.891251254Z     at async Object.findSession (.next/server/chunks/[root-of-the-server]__18pgid7._.js:114:18846)
+2026-07-18T16:08:47.891271164Z     at async (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:88725)
+2026-07-18T16:08:47.891274734Z     at async o (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:4510) {
+2026-07-18T16:08:47.891278304Z   code: 'P2037',
+2026-07-18T16:08:47.891281624Z   meta: {
+2026-07-18T16:08:47.891284934Z     modelName: 'Session',
+2026-07-18T16:08:47.891288244Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:47.891291674Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:47.891295364Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:47.891298924Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:47.891302304Z       [cause]: [Object]
+2026-07-18T16:08:47.891305674Z     }
+2026-07-18T16:08:47.891308984Z   },
+2026-07-18T16:08:47.891312384Z   clientVersion: '7.8.0'
+2026-07-18T16:08:47.891315704Z }
+2026-07-18T16:08:47.891993855Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:47.892014446Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:47.892018815Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:47.892022695Z   headers: {},
+2026-07-18T16:08:47.892026145Z   statusCode: 500
+2026-07-18T16:08:47.892029366Z }
+2026-07-18T16:08:47.939628767Z 2026-07-18T16:08:47.937Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:47.939832307Z Invalid `prisma.session.findFirst()` invocation:
+2026-07-18T16:08:47.939843117Z 
+2026-07-18T16:08:47.939848887Z 
+2026-07-18T16:08:47.939853957Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:47.939858987Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163)
+2026-07-18T16:08:47.939863877Z     at async Object.findSession (.next/server/chunks/[root-of-the-server]__18pgid7._.js:114:18846)
+2026-07-18T16:08:47.939868537Z     at async (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:88725)
+2026-07-18T16:08:47.939873637Z     at async o (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:4510) {
+2026-07-18T16:08:47.939879387Z   code: 'P2037',
+2026-07-18T16:08:47.939884477Z   meta: {
+2026-07-18T16:08:47.939889387Z     modelName: 'Session',
+2026-07-18T16:08:47.939894817Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:47.939899807Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:47.939915887Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:47.939919597Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:47.939923067Z       [cause]: [Object]
+2026-07-18T16:08:47.939926427Z     }
+2026-07-18T16:08:47.939930327Z   },
+2026-07-18T16:08:47.939933797Z   clientVersion: '7.8.0'
+2026-07-18T16:08:47.939937197Z }
+2026-07-18T16:08:47.940659768Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:47.940690018Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:47.940696408Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:47.940701488Z   headers: {},
+2026-07-18T16:08:47.940706378Z   statusCode: 500
+2026-07-18T16:08:47.940711248Z }
+2026-07-18T16:08:47.957722131Z 2026-07-18T16:08:47.956Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:47.957971731Z Invalid `prisma.session.findFirst()` invocation:
+2026-07-18T16:08:47.957980400Z 
+2026-07-18T16:08:47.957985061Z 
+2026-07-18T16:08:47.957989080Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:47.957992990Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163)
+2026-07-18T16:08:47.957996781Z     at async Object.findSession (.next/server/chunks/[root-of-the-server]__18pgid7._.js:114:18846)
+2026-07-18T16:08:47.958000771Z     at async (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:88725)
+2026-07-18T16:08:47.958004661Z     at async o (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:4510) {
+2026-07-18T16:08:47.958009240Z   code: 'P2037',
+2026-07-18T16:08:47.958014800Z   meta: {
+2026-07-18T16:08:47.958025661Z     modelName: 'Session',
+2026-07-18T16:08:47.958032131Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:47.958037440Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:47.958043061Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:47.958048200Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:47.958052981Z       [cause]: [Object]
+2026-07-18T16:08:47.958057871Z     }
+2026-07-18T16:08:47.958062861Z   },
+2026-07-18T16:08:47.958083711Z   clientVersion: '7.8.0'
+2026-07-18T16:08:47.958088701Z }
+2026-07-18T16:08:47.958381861Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:47.958417520Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:47.958433861Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:47.958461291Z   headers: {},
+2026-07-18T16:08:47.958465331Z   statusCode: 500
+2026-07-18T16:08:47.958468892Z }
+2026-07-18T16:08:52.368213215Z 2026-07-18T16:08:52.366Z ERROR [Better Auth]: INTERNAL_SERVER_ERROR Error [PrismaClientKnownRequestError]: 
+2026-07-18T16:08:52.368253625Z Invalid `prisma.session.findFirst()` invocation:
+2026-07-18T16:08:52.368264675Z 
+2026-07-18T16:08:52.368270725Z 
+2026-07-18T16:08:52.368275665Z Too many database connections opened: sorry, too many clients already
+2026-07-18T16:08:52.368281275Z     at async Object.findOne (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:10163)
+2026-07-18T16:08:52.368287395Z     at async Object.findSession (.next/server/chunks/[root-of-the-server]__18pgid7._.js:114:18846)
+2026-07-18T16:08:52.368292205Z     at async (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:88725)
+2026-07-18T16:08:52.368296786Z     at async o (.next/server/chunks/[root-of-the-server]__18pgid7._.js:105:4510) {
+2026-07-18T16:08:52.368302026Z   code: 'P2037',
+2026-07-18T16:08:52.368306815Z   meta: {
+2026-07-18T16:08:52.368324925Z     modelName: 'Session',
+2026-07-18T16:08:52.368329605Z     driverAdapterError: Error [DriverAdapterError]: TooManyConnections
+2026-07-18T16:08:52.368334085Z         at O.onError (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56131)
+2026-07-18T16:08:52.368338986Z         at O.performIO (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:56072)
+2026-07-18T16:08:52.368343975Z         at async O.queryRaw (.next/server/chunks/[root-of-the-server]__18pgid7._.js:473:52658) {
+2026-07-18T16:08:52.368349155Z       [cause]: [Object]
+2026-07-18T16:08:52.368354255Z     }
+2026-07-18T16:08:52.368358946Z   },
+2026-07-18T16:08:52.368363015Z   clientVersion: '7.8.0'
+2026-07-18T16:08:52.368366946Z }
+2026-07-18T16:08:52.368988507Z [Error [APIError]: Failed to get session] {
+2026-07-18T16:08:52.369034387Z   status: 'INTERNAL_SERVER_ERROR',
+2026-07-18T16:08:52.369044437Z   body: { message: 'Failed to get session', code: 'FAILED_TO_GET_SESSION' },
+2026-07-18T16:08:52.369050387Z   headers: {},
+2026-07-18T16:08:52.369056387Z   statusCode: 500
+2026-07-18T16:08:52.369061246Z }
