@@ -152,10 +152,48 @@ export async function createVendor(body: {
   return vendorToApi(vendor);
 }
 
+function splitCsvMulti(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(/[;|,]/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
 export async function bulkCreateVendors(vendorsList: unknown[]) {
   if (!Array.isArray(vendorsList)) {
     throw new ServiceError(400, "Invalid data format. Expected list of vendors.");
   }
+
+  const hubs = await prisma.hub.findMany({
+    select: { id: true, code: true },
+  });
+  const hubIdSet = new Set(hubs.map((hub) => hub.id));
+  const hubCodeToId = new Map(
+    hubs.map((hub) => [hub.code.trim().toLowerCase(), hub.id])
+  );
+
+  const resolveHubIds = (raw: string[]): string[] => {
+    const resolved: string[] = [];
+    for (const entry of raw) {
+      const trimmed = entry.trim();
+      if (!trimmed) continue;
+      if (hubIdSet.has(trimmed)) {
+        resolved.push(trimmed);
+        continue;
+      }
+      const byCode = hubCodeToId.get(trimmed.toLowerCase());
+      if (byCode) {
+        resolved.push(byCode);
+      }
+    }
+    return Array.from(new Set(resolved));
+  };
 
   const added = [];
 
@@ -164,30 +202,22 @@ export async function bulkCreateVendors(vendorsList: unknown[]) {
     const name = v.name || v.VendorName || v["Vendor Name"];
     const email = v.email || v.Email || v["Email Address"];
     const phone = v.phone || v.Phone || v["Phone Number"] || "";
-    const gstNumber = v.gstNumber || v.GST || v.gst || v["GST Number"] || "";
+    const gstRaw = v.gstNumber || v.GST || v.gst || v["GST Number"] || "";
+    const gstNumber = String(gstRaw).trim().toUpperCase();
     const state = v.state || v.State || "";
-    let statesVal = v.states || v.States || [];
 
-    if (typeof statesVal === "string") {
-      statesVal = statesVal.split(",").map((s: string) => s.trim()).filter((s: string) => s.length > 0);
-    }
-    if (!Array.isArray(statesVal)) {
-      statesVal = state ? [String(state)] : [];
+    let statesVal = splitCsvMulti(v.states ?? v.States);
+    if (statesVal.length === 0 && state) {
+      statesVal = splitCsvMulti(state);
     }
 
-    let hubsVal = v.hubs || v.Hubs || v.hub || [];
-    if (typeof hubsVal === "string") {
-      hubsVal = hubsVal.split(",").map((h: string) => h.trim()).filter((h: string) => h.length > 0);
-    }
-    if (!Array.isArray(hubsVal)) {
-      hubsVal = [];
-    }
+    const hubsRaw = splitCsvMulti(
+      v.hubs ?? v.Hubs ?? v.hub ?? v.hubCodes ?? v["Hub Codes"] ?? v["Hub Code"]
+    );
+    const hubIds = resolveHubIds(hubsRaw);
 
-    let cats = v.categories || v.Categories || v["Category"] || ["Others"];
-    if (typeof cats === "string") {
-      cats = cats.split(",").map((c: string) => c.trim()).filter((c: string) => c.length > 0);
-    }
-    if (!Array.isArray(cats) || cats.length === 0) {
+    let cats = splitCsvMulti(v.categories ?? v.Categories ?? v.Category);
+    if (cats.length === 0) {
       cats = ["Others"];
     }
 
@@ -200,11 +230,11 @@ export async function bulkCreateVendors(vendorsList: unknown[]) {
           phone: String(phone).trim(),
           token: generateToken(String(name).trim()),
           status: "active",
-          categories: cats as string[],
-          gstNumber: String(gstNumber).trim(),
-          state: (statesVal as string[]).join(", "),
-          states: statesVal as string[],
-          hubIds: hubsVal as string[],
+          categories: cats,
+          gstNumber: gstNumber || null,
+          state: statesVal.join(", "),
+          states: statesVal,
+          hubIds,
           kycStatus: "pending_submission",
         },
       });

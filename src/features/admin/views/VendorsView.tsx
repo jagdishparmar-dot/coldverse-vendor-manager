@@ -137,7 +137,7 @@ export default function VendorsView({
             Vendor Directory
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Manage vendor profiles, billing categories, and bulk imports.
+            Manage vendor profiles, billing categories, and CSV bulk imports.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:justify-end">

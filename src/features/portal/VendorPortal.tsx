@@ -827,17 +827,101 @@ export default function VendorPortal({ token }: VendorPortalProps) {
             />
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* Left Column: Primary upload + optional creator */}
+              {/* Left Column: creator first, then upload submit */}
               <div className={`${portalSubMode === "generate" ? "lg:col-span-12" : "lg:col-span-7"} space-y-6`}>
+                {/* 1) Invoice creator — shown first so vendors see create OR upload */}
+                <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                  {portalSubMode !== "generate" ? (
+                    <div className="rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50/80 to-white px-4 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+                            Option 1
+                          </span>
+                          <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-orange-600" />
+                            Create invoice here
+                          </p>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Generate a GST tax invoice PDF with templates, then submit it from the portal.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPortalSubMode("generate");
+                          setPUploadError("");
+                          setPSuccessMsg(null);
+                        }}
+                        className="shrink-0 px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl bg-orange-600 text-white hover:bg-orange-700 shadow-sm cursor-pointer"
+                      >
+                        Open invoice creator
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-lg font-display font-semibold text-gray-900">
+                            Invoice creator
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Build your tax invoice PDF, then return to upload if you already have a file.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPortalSubMode("upload");
+                            setPUploadError("");
+                          }}
+                          className="text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer shrink-0"
+                        >
+                          ← Back to upload
+                        </button>
+                      </div>
+                      <PortalInvoiceGenerator
+                        vendor={currentVendor}
+                        vendorToken={token}
+                        categories={allCategories}
+                        portalHubs={portalHubs}
+                        company={portalCompany}
+                        onSuccess={(message) => {
+                          setPSuccessMsg(message);
+                          setPUploadError("");
+                          setPortalSubMode("upload");
+                          fetchPortalData(token);
+                        }}
+                        onError={(message) => setPUploadError(message)}
+                        onClose={() => setPortalSubMode("upload")}
+                      />
+                      {pUploadError && (
+                        <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{pUploadError}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2) Submit / upload existing invoice */}
+                {portalSubMode !== "generate" && (
                 <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
                   <div className="flex justify-between items-center mb-2">
-                    <h2 className="text-lg font-display font-semibold text-gray-900">Submit Invoice</h2>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                        Option 2
+                      </span>
+                      <h2 className="text-lg font-display font-semibold text-gray-900">Submit Invoice</h2>
+                    </div>
                     <span className="text-[10px] bg-violet-100 text-violet-700 font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
                       Portal Active
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 mb-6">
-                    Upload your existing tax invoice file. Invoice creator is optional if you need to generate a PDF here.
+                    Already have a tax invoice file? Upload it below with category, hub, and amount details.
                   </p>
 
                   {pSuccessMsg && (
@@ -860,7 +944,6 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                     </div>
                   )}
 
-                  {portalSubMode !== "generate" && (
                     <form onSubmit={handleInvoiceSubmit} className="space-y-4">
                       {/* Category Picker */}
                       <div className="space-y-1.5">
@@ -1091,73 +1174,8 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                         )}
                       </button>
                     </form>
-                  )}
-
-                  {/* Optional creator — secondary path */}
-                  <div className={`${portalSubMode === "generate" ? "mt-2" : "mt-6"} border-t border-dashed border-gray-200 pt-5`}>
-                    {portalSubMode !== "generate" ? (
-                      <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-slate-500" />
-                            Need to create an invoice?
-                          </p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">
-                            Optional — generate a GST tax invoice PDF with templates, then submit it from here.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPortalSubMode("generate");
-                            setPUploadError("");
-                            setPSuccessMsg(null);
-                          }}
-                          className="shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 cursor-pointer"
-                        >
-                          Open invoice creator
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-semibold text-slate-800">Invoice creator</p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPortalSubMode("upload");
-                              setPUploadError("");
-                            }}
-                            className="text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
-                          >
-                            ← Back to upload
-                          </button>
-                        </div>
-                        <PortalInvoiceGenerator
-                          vendor={currentVendor}
-                          vendorToken={token}
-                          categories={allCategories}
-                          portalHubs={portalHubs}
-                          company={portalCompany}
-                          onSuccess={(message) => {
-                            setPSuccessMsg(message);
-                            setPUploadError("");
-                            setPortalSubMode("upload");
-                            fetchPortalData(token);
-                          }}
-                          onError={(message) => setPUploadError(message)}
-                          onClose={() => setPortalSubMode("upload")}
-                        />
-                        {pUploadError && portalSubMode === "generate" && (
-                          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4 shrink-0" />
-                            <span>{pUploadError}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
                 </div>
+                )}
               </div>
 
               {portalSubMode !== "generate" && (
