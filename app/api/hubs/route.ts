@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleServiceError } from "@/lib/api-utils";
+import { requireAdmin } from "@/lib/auth-guards";
 import { parsePageLimit } from "@/lib/pagination";
 import { createHub, listHubOptions, listHubsPaginated } from "@/lib/services/hubs";
 
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    await requireAdmin();
     const body = await request.json();
     const hub = await createHub(body);
     return NextResponse.json(hub, { status: 201 });

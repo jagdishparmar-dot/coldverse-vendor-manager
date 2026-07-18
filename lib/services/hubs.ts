@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { hubToApi } from "@/lib/mappers";
 import { ServiceError } from "@/lib/services/utils";
+import { newSecureId } from "@/lib/auth-guards";
 import {
   getStateCodeFromGstin,
   getStateCodeFromName,
@@ -130,7 +131,7 @@ export async function createHub(body: HubInput) {
 
   const hub = await prisma.hub.create({
     data: {
-      id: `hub-${Date.now()}`,
+      id: newSecureId("hub"),
       name: name.trim(),
       code: cleanCode,
       ...gstFields,
@@ -224,7 +225,7 @@ export async function bulkCreateHubs(hubsList: unknown[]) {
       pendingCodes.add(cleanCode);
       const hub = await prisma.hub.create({
         data: {
-          id: `hub-${Date.now()}-${index}`,
+          id: newSecureId("hub"),
           name: String(name).trim(),
           code: cleanCode,
           ...gstFields,

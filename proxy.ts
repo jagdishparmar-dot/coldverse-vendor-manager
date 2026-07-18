@@ -31,6 +31,7 @@ function isPublicApi(pathname: string, method: string): boolean {
     return true;
   }
 
+  // Handlers enforce admin session OR portal ?token= / body.token
   if (pathname.startsWith("/api/vendors/kyc/download/")) {
     return true;
   }

@@ -33,6 +33,7 @@ type PortalUploadHistoryProps = {
   invoices: Invoice[];
   vendor: Vendor | null;
   hubs: Hub[];
+  portalToken: string;
   onPrintInvoice: (inv: Invoice) => void;
   onEditInvoice: (inv: Invoice) => void;
 };
@@ -45,6 +46,7 @@ export default function PortalUploadHistory({
   invoices,
   vendor,
   hubs,
+  portalToken,
   onPrintInvoice,
   onEditInvoice,
 }: PortalUploadHistoryProps) {
@@ -291,7 +293,7 @@ export default function PortalUploadHistory({
                         <td className="px-3 sm:px-4 py-2.5">
                           <div className="flex items-center justify-end gap-0.5">
                             <a
-                              href={`/api/invoices/download/${inv.id}`}
+                              href={`/api/invoices/download/${inv.id}?token=${encodeURIComponent(portalToken)}`}
                               className="p-1.5 rounded-lg text-violet-600 hover:bg-violet-50 cursor-pointer"
                               title="Download file"
                             >

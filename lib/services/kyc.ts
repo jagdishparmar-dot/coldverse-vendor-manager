@@ -3,10 +3,10 @@ import { vendorToApi } from "@/lib/mappers";
 import type { KYCDetails } from "@/src/types";
 import {
   buildKycKey,
-  decodeBase64File,
   getKycObject,
   uploadKycFile,
 } from "@/lib/storage/s3";
+import { decodeAndValidateUpload } from "@/lib/upload-guards";
 import { notifyVendorKycVerified } from "@/lib/services/notifications";
 import { ServiceError } from "@/lib/services/utils";
 import type { Prisma } from "@/src/generated/prisma/client";
@@ -36,18 +36,20 @@ async function saveOptionalDoc(
   }
 
   const key = buildKycKey(vendorId, docType, fileName);
-  const buffer = decodeBase64File(fileData);
+  const { buffer, contentType } = decodeAndValidateUpload(fileData, {
+    fileName,
+    claimedType: fileType,
+  });
   try {
-    await uploadKycFile(key, buffer, fileType || "application/pdf");
+    await uploadKycFile(key, buffer, contentType);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to store KYC document.";
-    throw new ServiceError(503, message);
+    console.error("[kyc] storage error", error);
+    throw new ServiceError(503, "Failed to store KYC document.");
   }
 
   return {
     name: fileName || `${docType}_document.pdf`,
-    type: fileType || "application/pdf",
+    type: contentType,
     path: key,
   };
 }
@@ -140,13 +142,16 @@ export async function submitKyc(body: {
 
   if (fileData) {
     kycDocPath = buildKycKey(vendor.id, "kyc", fileName);
-    const buffer = decodeBase64File(fileData);
+    const { buffer, contentType } = decodeAndValidateUpload(fileData, {
+      fileName,
+      claimedType: fileType,
+    });
+    kycDocType = contentType;
     try {
-      await uploadKycFile(kycDocPath, buffer, kycDocType);
+      await uploadKycFile(kycDocPath, buffer, contentType);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to store KYC document.";
-      throw new ServiceError(503, message);
+      console.error("[kyc] storage error", error);
+      throw new ServiceError(503, "Failed to store KYC document.");
     }
   }
 

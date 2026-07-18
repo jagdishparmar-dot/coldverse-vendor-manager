@@ -77,17 +77,18 @@ export default function VendorForm({ vendor, onSuccess, onClose }: VendorFormPro
         }
       });
 
-    // Fetch hubs
-    fetch("/api/hubs")
+    // Fetch hubs (compact options list — /api/hubs alone returns a paginated envelope)
+    fetch("/api/hubs?options=1")
       .then((res) => {
         if (res.ok) return res.json();
         throw new Error();
       })
       .then((data) => {
-        setAvailableHubs(data);
+        setAvailableHubs(Array.isArray(data) ? data : []);
       })
       .catch((err) => {
         console.error("Failed to load hubs:", err);
+        setAvailableHubs([]);
       });
   }, []);
 

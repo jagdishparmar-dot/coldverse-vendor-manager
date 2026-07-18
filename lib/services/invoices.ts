@@ -2,12 +2,12 @@ import { prisma } from "@/lib/db";
 import { invoiceToApi, portalInvoiceToApi, vendorToApi } from "@/lib/mappers";
 import {
   buildInvoiceKey,
-  decodeBase64File,
   uploadInvoiceFile,
 } from "@/lib/storage/s3";
+import { decodeAndValidateUpload } from "@/lib/upload-guards";
+import { newSecureId, requirePortalSession } from "@/lib/auth-guards";
 import { listCategories } from "@/lib/services/categories";
 import { getCompanyProfile } from "@/lib/services/company";
-import { listHubs } from "@/lib/services/hubs";
 import { notifyCompanyInvoiceUploaded, notifyVendorInvoiceStatusChanged } from "@/lib/services/notifications";
 import { ServiceError } from "@/lib/services/utils";
 import {
@@ -168,10 +168,16 @@ export async function uploadInvoice(body: {
     throw new ServiceError(400, "Missing required invoice details or file.");
   }
 
-  const vendor = await prisma.vendor.findUnique({ where: { id: vendorId } });
-  if (!vendor) {
-    throw new ServiceError(404, "Vendor not found.");
+  // Auth first — avoid leaking vendor/KYC existence to unauthenticated callers
+  if (!token) {
+    throw new ServiceError(401, "OTP Verification Required", { otpRequired: true });
   }
+  const { vendor: sessionVendor } = await requirePortalSession(String(token));
+  if (sessionVendor.id !== vendorId) {
+    throw new ServiceError(403, "Token does not match vendor.");
+  }
+
+  const vendor = sessionVendor;
 
   if (vendor.kycStatus !== "verified") {
     throw new ServiceError(
@@ -180,33 +186,22 @@ export async function uploadInvoice(body: {
     );
   }
 
-  if (token) {
-    const session = await prisma.portalSession.findUnique({ where: { token } });
-    if (!session || Date.now() > session.expiresAt.getTime()) {
-      if (session) {
-        await prisma.portalSession.delete({ where: { token } });
-      }
-      throw new ServiceError(401, "OTP Verification Required", { otpRequired: true });
-    }
-    if (vendor.token !== token) {
-      throw new ServiceError(403, "Token does not match vendor.");
-    }
-  }
-
+  const { buffer, contentType } = decodeAndValidateUpload(fileData, {
+    fileName,
+    claimedType: fileType,
+  });
   const uniqueFileName = buildInvoiceKey(vendorId, fileName);
-  const buffer = decodeBase64File(fileData);
 
   try {
-    await uploadInvoiceFile(uniqueFileName, buffer, fileType || "application/octet-stream");
+    await uploadInvoiceFile(uniqueFileName, buffer, contentType);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to store invoice file.";
-    throw new ServiceError(503, message);
+    console.error("[uploadInvoice] storage error", error);
+    throw new ServiceError(503, "Failed to store invoice file.");
   }
 
   const invoice = await prisma.invoice.create({
     data: {
-      id: `inv-${Date.now()}`,
+      id: newSecureId("inv"),
       vendorId,
       vendorName: vendor.name,
       category,
@@ -214,7 +209,7 @@ export async function uploadInvoice(body: {
       amount: Number(amount),
       date,
       fileName: fileName || uniqueFileName,
-      fileType: fileType || "application/octet-stream",
+      fileType: contentType,
       filePath: uniqueFileName,
       uploadedAt: new Date(),
       status: "Pending",
@@ -256,11 +251,20 @@ export async function updateInvoice(
     fileData?: string;
     hardCopySubmittedTo?: string;
     hardCopySubmissionDate?: string;
-  }
+    /** Portal share token — required for portal edits */
+    token?: string;
+  },
+  options?: { actor: "admin" | "portal"; portalVendorId?: string }
 ) {
   const invoice = await prisma.invoice.findUnique({ where: { id } });
   if (!invoice) {
     throw new ServiceError(404, "Invoice not found.");
+  }
+
+  if (options?.actor === "portal") {
+    if (!options.portalVendorId || options.portalVendorId !== invoice.vendorId) {
+      throw new ServiceError(403, "Forbidden");
+    }
   }
 
   if (invoice.status === "Paid") {
@@ -284,21 +288,19 @@ export async function updateInvoice(
   }
 
   if (body.fileData) {
+    const { buffer, contentType } = decodeAndValidateUpload(body.fileData, {
+      fileName: body.fileName,
+      claimedType: body.fileType,
+    });
     const uniqueFileName = buildInvoiceKey(invoice.vendorId, body.fileName);
-    const buffer = decodeBase64File(body.fileData);
     try {
-      await uploadInvoiceFile(
-        uniqueFileName,
-        buffer,
-        body.fileType || "application/octet-stream"
-      );
+      await uploadInvoiceFile(uniqueFileName, buffer, contentType);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to store invoice file.";
-      throw new ServiceError(503, message);
+      console.error("[updateInvoice] storage error", error);
+      throw new ServiceError(503, "Failed to store invoice file.");
     }
     data.fileName = body.fileName || uniqueFileName;
-    data.fileType = body.fileType || "application/octet-stream";
+    data.fileType = contentType;
     data.filePath = uniqueFileName;
   }
 
@@ -383,10 +385,11 @@ export async function getInvoiceById(id: string) {
   return prisma.invoice.findUnique({ where: { id } });
 }
 
-export async function getVendorPortalInvoices(vendorId: string) {
+export async function getVendorPortalInvoices(vendorId: string, limit = 100) {
   const invoices = await prisma.invoice.findMany({
     where: { vendorId, archived: false },
     orderBy: { uploadedAt: "desc" },
+    take: Math.min(200, Math.max(1, limit)),
   });
   return invoices.map(portalInvoiceToApi);
 }
@@ -397,10 +400,21 @@ export async function getPortalPayload(vendorId: string) {
     throw new ServiceError(404, "Invalid vendor portal link. Please check with administrator.");
   }
 
+  const hubFilter =
+    vendor.hubIds.length > 0
+      ? { id: { in: vendor.hubIds } }
+      : vendor.states.length > 0
+        ? { state: { in: vendor.states } }
+        : undefined;
+
   const [invoices, categories, hubs, company] = await Promise.all([
-    getVendorPortalInvoices(vendorId),
+    getVendorPortalInvoices(vendorId, 100),
     listCategories(),
-    listHubs(),
+    prisma.hub.findMany({
+      where: hubFilter,
+      orderBy: { name: "asc" },
+      take: 500,
+    }),
     getCompanyProfile(),
   ]);
 
@@ -408,7 +422,20 @@ export async function getPortalPayload(vendorId: string) {
     vendor: vendorToApi(vendor),
     invoices,
     categories,
-    hubs,
+    hubs: hubs.map((hub) => ({
+      id: hub.id,
+      name: hub.name,
+      code: hub.code,
+      state: hub.state,
+      stateCode: hub.stateCode ?? undefined,
+      address: hub.address || undefined,
+      city: hub.city || undefined,
+      pincode: hub.pincode || undefined,
+      gstin: hub.gstin ?? undefined,
+      billingAddress: hub.billingAddress ?? undefined,
+      createdAt: hub.createdAt.toISOString(),
+      updatedAt: hub.updatedAt?.toISOString(),
+    })),
     company,
   };
 }

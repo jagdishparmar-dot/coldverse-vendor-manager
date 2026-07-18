@@ -1,7 +1,8 @@
-export function generateToken(name: string): string {
-  const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 15);
-  const rand = Math.random().toString(36).substring(2, 8);
-  return `${cleanName}-${rand}`;
+import { randomBytes } from "crypto";
+
+/** Cryptographically strong portal share token (not name-derived). */
+export function generateToken(_name?: string): string {
+  return randomBytes(24).toString("base64url");
 }
 
 export function normalizePhone(phone: string): string {

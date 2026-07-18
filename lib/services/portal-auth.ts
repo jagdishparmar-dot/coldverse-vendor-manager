@@ -1,7 +1,19 @@
+import { headers } from "next/headers";
+import {
+  assertRateLimit,
+  clientIpFromHeaders,
+  generateNumericOtp,
+  hashOtp,
+  requirePortalSession,
+  safeEqualString,
+} from "@/lib/auth-guards";
 import { prisma } from "@/lib/db";
 import { getPortalPayload } from "@/lib/services/invoices";
 import { findVendorByToken } from "@/lib/services/vendors";
 import { maskPhone, normalizePhone, ServiceError } from "@/lib/services/utils";
+
+const OTP_FAIL_KEY = (token: string) => `otp-fail:${token}`;
+const OTP_SEND_KEY = (token: string, ip: string) => `otp-send:${token}:${ip}`;
 
 export async function portalCheck(token: string) {
   const vendor = await findVendorByToken(token);
@@ -12,10 +24,10 @@ export async function portalCheck(token: string) {
     );
   }
 
+  // Do not expose full phone — masked only
   return {
     success: true,
     name: vendor.name,
-    phone: vendor.phone,
     maskedPhone: maskPhone(vendor.phone),
   };
 }
@@ -24,6 +36,15 @@ export async function sendPortalOtp(token: string, phone: string) {
   if (!token || !phone) {
     throw new ServiceError(400, "Token and phone number are required.");
   }
+
+  const headerList = await headers();
+  const ip = clientIpFromHeaders(headerList);
+  assertRateLimit(
+    OTP_SEND_KEY(token, ip),
+    5,
+    15 * 60 * 1000,
+    "Too many OTP requests. Please wait before trying again."
+  );
 
   const vendor = await findVendorByToken(token);
   if (!vendor) {
@@ -40,29 +61,38 @@ export async function sendPortalOtp(token: string, phone: string) {
     );
   }
 
-  const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+  const generatedOtp = generateNumericOtp(6);
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
   await prisma.portalOtp.upsert({
     where: { token },
     create: {
       token,
-      otp: generatedOtp,
+      otp: hashOtp(generatedOtp),
       phone: normInput,
       expiresAt,
     },
     update: {
-      otp: generatedOtp,
+      otp: hashOtp(generatedOtp),
       phone: normInput,
       expiresAt,
     },
   });
 
+  // Never log plaintext OTP. Wire SMS/email provider here.
   console.log(
-    `[OTP Portal Service] Generated OTP for ${vendor.name} (${phone}): ${generatedOtp}`
+    `[OTP Portal Service] OTP issued for vendor ${vendor.id} (expires ${expiresAt.toISOString()})`
   );
 
-  // OTP is not returned to the client. Wire an SMS provider here later.
+  // Dev-only convenience: expose OTP when explicitly enabled
+  if (process.env.PORTAL_OTP_DEV_ECHO === "true") {
+    return {
+      success: true,
+      message: "OTP sent to registered mobile number.",
+      devOtp: generatedOtp,
+    };
+  }
+
   return {
     success: true,
     message: "OTP sent to registered mobile number.",
@@ -73,6 +103,13 @@ export async function verifyPortalOtp(token: string, phone: string, otp: string)
   if (!token || !phone || !otp) {
     throw new ServiceError(400, "Token, phone number, and OTP are required.");
   }
+
+  assertRateLimit(
+    OTP_FAIL_KEY(token),
+    8,
+    15 * 60 * 1000,
+    "Too many failed OTP attempts. Please request a new OTP later."
+  );
 
   const vendor = await findVendorByToken(token);
   if (!vendor) {
@@ -91,7 +128,9 @@ export async function verifyPortalOtp(token: string, phone: string, otp: string)
     throw new ServiceError(400, "OTP has expired. Please request a new OTP.");
   }
 
-  if (stored.otp !== otp || stored.phone !== normInput) {
+  const otpOk = safeEqualString(stored.otp, hashOtp(otp));
+  const phoneOk = safeEqualString(stored.phone, normInput);
+  if (!otpOk || !phoneOk) {
     throw new ServiceError(400, "Invalid OTP code. Please try again.");
   }
 
@@ -121,23 +160,7 @@ export async function verifyPortalOtp(token: string, phone: string, otp: string)
 }
 
 export async function getVerifiedPortalData(token: string) {
-  const session = await prisma.portalSession.findUnique({ where: { token } });
-
-  if (!session || Date.now() > session.expiresAt.getTime()) {
-    if (session) {
-      await prisma.portalSession.delete({ where: { token } });
-    }
-    throw new ServiceError(401, "OTP Verification Required", { otpRequired: true });
-  }
-
-  const vendor = await findVendorByToken(token);
-  if (!vendor) {
-    throw new ServiceError(
-      404,
-      "Invalid vendor portal link. Please check with administrator."
-    );
-  }
-
+  const { vendor } = await requirePortalSession(token);
   return getPortalPayload(vendor.id);
 }
 

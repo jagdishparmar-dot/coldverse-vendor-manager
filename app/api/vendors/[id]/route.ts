@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { handleServiceError } from "@/lib/api-utils";
+import { requireAdmin } from "@/lib/auth-guards";
 import { archiveVendor, updateVendor } from "@/lib/services/vendors";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PUT(request: Request, context: RouteContext) {
   try {
+    await requireAdmin();
     const { id } = await context.params;
     const body = await request.json();
     const vendor = await updateVendor(id, body);
@@ -17,6 +19,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
 export async function DELETE(request: Request, context: RouteContext) {
   try {
+    await requireAdmin();
     const { id } = await context.params;
     const body = await request.json();
     const result = await archiveVendor(id, body.remarks);

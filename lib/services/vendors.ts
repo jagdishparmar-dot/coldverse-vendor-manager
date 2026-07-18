@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { vendorToApi } from "@/lib/mappers";
 import { notifyVendorRegistered } from "@/lib/services/notifications";
 import { generateToken, ServiceError } from "@/lib/services/utils";
+import { newSecureId } from "@/lib/auth-guards";
 import {
   DEFAULT_PAGE,
   DEFAULT_PAGE_SIZE,
@@ -128,7 +129,7 @@ export async function createVendor(body: {
 
   const vendor = await prisma.vendor.create({
     data: {
-      id: `v-${Date.now()}`,
+      id: newSecureId("v"),
       name,
       email: email || "",
       phone: phone || "",
@@ -224,7 +225,7 @@ export async function bulkCreateVendors(vendorsList: unknown[]) {
     if (name && phone) {
       const vendor = await prisma.vendor.create({
         data: {
-          id: `v-${Date.now()}-${index}`,
+          id: newSecureId("v"),
           name: String(name).trim(),
           email: String(email ?? "").trim(),
           phone: String(phone).trim(),

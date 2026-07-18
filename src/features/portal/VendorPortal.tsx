@@ -40,7 +40,10 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
   // OTP Verification States
   const [isOtpVerified, setIsOtpVerified] = useState(false);
-  const [portalCheckedVendor, setPortalCheckedVendor] = useState<{ name: string; phone: string; maskedPhone: string } | null>(null);
+  const [portalCheckedVendor, setPortalCheckedVendor] = useState<{
+    name: string;
+    maskedPhone: string;
+  } | null>(null);
   const [otpRequested, setOtpRequested] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpPhone, setOtpPhone] = useState("");
@@ -103,8 +106,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
             const checkData = await checkRes.json();
             setPortalCheckedVendor({
               name: checkData.name,
-              phone: checkData.phone,
-              maskedPhone: checkData.maskedPhone
+              maskedPhone: checkData.maskedPhone,
             });
             setIsOtpVerified(false);
             setPortalLoading(false);
@@ -435,6 +437,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          token,
           category: editCategory,
           invoiceNumber: editInvoiceNo.trim(),
           amount: amt,
@@ -503,7 +506,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                   {activePrintInvoice.fileType && activePrintInvoice.fileType.startsWith("image/") ? (
                     <div className="border border-slate-200 rounded-lg overflow-hidden p-2 bg-slate-50 max-h-[400px] flex justify-center items-center">
                       <img
-                        src={`/api/invoices/view/${activePrintInvoice.id}`}
+                        src={`/api/invoices/view/${activePrintInvoice.id}?token=${encodeURIComponent(token)}`}
                         alt={activePrintInvoice.fileName}
                         className="max-h-[380px] w-auto object-contain rounded animate-fade-in"
                       />
@@ -546,7 +549,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
           <div className="print-only bg-white text-black w-full h-full flex flex-col justify-center items-center p-0 m-0">
             {activePrintInvoice.fileType && activePrintInvoice.fileType.startsWith("image/") ? (
               <img
-                src={`/api/invoices/view/${activePrintInvoice.id}`}
+                src={`/api/invoices/view/${activePrintInvoice.id}?token=${encodeURIComponent(token)}`}
                 alt={activePrintInvoice.fileName}
                 referrerPolicy="no-referrer"
                 className="max-w-full max-h-[98vh] object-contain mx-auto"
@@ -1099,7 +1102,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                             id="p-file-input"
                             type="file"
                             className="hidden"
-                            accept=".pdf,image/*,.docx,.doc,.txt"
+                            accept=".pdf,image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
                             onChange={(e) => {
                               if (e.target.files && e.target.files[0]) {
                                 handleVendorFile(e.target.files[0]);
@@ -1184,6 +1187,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                     invoices={portalInvoices}
                     vendor={currentVendor}
                     hubs={portalHubs}
+                    portalToken={token}
                     onPrintInvoice={handlePrintInvoice}
                     onEditInvoice={startEditingInvoice}
                   />
