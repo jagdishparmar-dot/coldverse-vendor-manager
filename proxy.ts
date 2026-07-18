@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { ADMIN_DEFAULT_PATH, ADMIN_TABS } from "@/src/constants/adminRoutes";
+
+const ADMIN_PAGE_PATHS = new Set([
+  "/",
+  "/profile",
+  "/users",
+  ...ADMIN_TABS.map((tab) => `/${tab}`),
+]);
 
 function isPublicApi(pathname: string, method: string): boolean {
   if (pathname.startsWith("/api/auth")) {
@@ -72,27 +80,30 @@ export async function proxy(request: NextRequest) {
   if (pathname === "/login") {
     const session = await getSession();
     if (session) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL(ADMIN_DEFAULT_PATH, request.url));
     }
     return NextResponse.next();
   }
 
+  // Vendor portal deep links stay on `/`
   if (pathname === "/" && searchParams.has("token")) {
     return NextResponse.next();
   }
 
-  if (pathname === "/" || pathname === "/profile" || pathname === "/users") {
+  if (ADMIN_PAGE_PATHS.has(pathname)) {
     const session = await getSession();
     if (!session) {
       const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("next", pathname);
+      loginUrl.searchParams.set("next", pathname === "/" ? ADMIN_DEFAULT_PATH : pathname);
       return NextResponse.redirect(loginUrl);
     }
 
     if (pathname === "/users" && session.user.role !== "admin") {
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL(ADMIN_DEFAULT_PATH, request.url));
     }
 
+    // Logged-in users hitting bare `/` are sent to the dashboard by the page client;
+    // proxy allows through so portal redirect logic can run without a loop.
     return NextResponse.next();
   }
 
@@ -100,5 +111,18 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/profile", "/users", "/api/:path*"],
+  matcher: [
+    "/",
+    "/login",
+    "/profile",
+    "/users",
+    "/dashboard",
+    "/vendors",
+    "/invoices",
+    "/hubs",
+    "/remarks",
+    "/kyc",
+    "/archive",
+    "/api/:path*",
+  ],
 };

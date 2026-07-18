@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Users,
   FileCheck,
@@ -48,6 +50,12 @@ import { ColdverseDateField } from "@/src/components/coldverse-date-field";
 import { UserMenu } from "@/src/components/UserMenu";
 import { AdminRefreshControl } from "@/src/components/AdminRefreshControl";
 import { useSession } from "@/lib/auth-client";
+import {
+  ADMIN_NAV,
+  hrefForTab,
+  tabFromPathname,
+  type AdminTab,
+} from "@/src/constants/adminRoutes";
 
 const MONTH_FILTER_OPTIONS = [
   { value: "All", label: "All Months" },
@@ -74,6 +82,8 @@ type AppProps = {
 
 export default function App({ initialVendorToken = null }: AppProps) {
   const { data: session } = useSession();
+  const pathname = usePathname();
+  const router = useRouter();
 
   // Routing State based on URL Search Query Token — seed from URL so portal never flashes admin UI
   const [vendorToken, setVendorToken] = useState<string | null>(initialVendorToken);
@@ -100,7 +110,9 @@ export default function App({ initialVendorToken = null }: AppProps) {
   const [hubs, setHubs] = useState<Hub[]>([]);
   
   // UI states
-  const [activeTab, setActiveTab] = useState<"dashboard" | "vendors" | "invoices" | "hubs" | "archive" | "remarks" | "kyc">("dashboard");
+  const [activeTab, setActiveTab] = useState<AdminTab>(
+    () => tabFromPathname(pathname) || "dashboard"
+  );
   const [showSingleVendorModal, setShowSingleVendorModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [vendorViewMode, setVendorViewMode] = useState<"grid" | "table">("grid");
@@ -652,6 +664,20 @@ export default function App({ initialVendorToken = null }: AppProps) {
     fetchAdminData();
   }, [initialVendorToken]);
 
+  // Phase 1: keep tab state in sync with App Router pathname
+  useEffect(() => {
+    if (vendorToken || initialVendorToken) return;
+    const tab = tabFromPathname(pathname);
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [pathname, vendorToken, initialVendorToken, activeTab]);
+
+  const navigateToTab = (tab: AdminTab) => {
+    setActiveTab(tab);
+    router.push(hrefForTab(tab));
+  };
+
   // Auto-refresh timer for Admin Console
   useEffect(() => {
     // Only auto-refresh in admin mode (no vendorToken) and if auto-refresh is enabled
@@ -828,9 +854,8 @@ export default function App({ initialVendorToken = null }: AppProps) {
 
   // Copy shareable link to clipboard
   const handleCopyLink = (token: string) => {
-    // Construct absolute shareable URL
-    const appUrl = window.location.origin + window.location.pathname;
-    const shareableLink = `${appUrl}?token=${token}`;
+    // Portal links always use root `/` (not admin section paths)
+    const shareableLink = `${window.location.origin}/?token=${token}`;
     
     // Copy fallback for iframe constraints
     try {
@@ -2431,71 +2456,41 @@ export default function App({ initialVendorToken = null }: AppProps) {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200/80 pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0">
           <div className="flex bg-gray-100 p-1 rounded-xl overflow-x-auto whitespace-nowrap flex-nowrap max-w-full gap-1 no-scrollbar scrollbar-none">
-            <button
-              onClick={() => setActiveTab("dashboard")}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-all cursor-pointer shrink-0 ${
-                activeTab === "dashboard"
+            {ADMIN_NAV.filter((item) => item.primary).map((item) => (
+              <Link
+                key={item.tab}
+                href={item.href}
+                onClick={() => setActiveTab(item.tab)}
+                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-all shrink-0 relative ${
+                  activeTab === item.tab
+                    ? "bg-orange-600 text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
+                }`}
+              >
+                {item.label}
+                {item.tab === "kyc" &&
+                  vendors.filter((v) => v.kycStatus === "pending_verification").length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">
+                      {vendors.filter((v) => v.kycStatus === "pending_verification").length}
+                    </span>
+                  )}
+              </Link>
+            ))}
+            <Link
+              href="/archive"
+              onClick={() => setActiveTab("archive")}
+              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-all shrink-0 ${
+                activeTab === "archive"
                   ? "bg-orange-600 text-white shadow-sm"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
               }`}
+              title="System Archive"
             >
-              Analytics Dashboard
-            </button>
-            <button
-              onClick={() => setActiveTab("vendors")}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-all cursor-pointer shrink-0 ${
-                activeTab === "vendors"
-                  ? "bg-orange-600 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
-              }`}
-            >
-              Manage Vendors
-            </button>
-            <button
-              onClick={() => setActiveTab("invoices")}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-all cursor-pointer shrink-0 ${
-                activeTab === "invoices"
-                  ? "bg-orange-600 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
-              }`}
-            >
-              Invoice logs
-            </button>
-            <button
-              onClick={() => setActiveTab("hubs")}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-all cursor-pointer shrink-0 ${
-                activeTab === "hubs"
-                  ? "bg-orange-600 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
-              }`}
-            >
-              Logistics Hubs
-            </button>
-            <button
-              onClick={() => setActiveTab("remarks")}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-all cursor-pointer shrink-0 ${
-                activeTab === "remarks"
-                  ? "bg-orange-600 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
-              }`}
-            >
-              Remarks Summary
-            </button>
-            <button
-              onClick={() => setActiveTab("kyc")}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-all cursor-pointer shrink-0 relative ${
-                activeTab === "kyc"
-                  ? "bg-orange-600 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
-              }`}
-            >
-              KYC Approvals
-              {vendors.filter((v) => v.kycStatus === "pending_verification").length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">
-                  {vendors.filter((v) => v.kycStatus === "pending_verification").length}
-                </span>
-              )}
-            </button>
+              <span className="inline-flex items-center gap-1.5">
+                <Archive className="w-3.5 h-3.5" />
+                Archive
+              </span>
+            </Link>
           </div>
           {headerHubFilter !== "All" && (
             <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100 shrink-0">
@@ -2870,7 +2865,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
             statusKPIs={statusKPIs}
             onStatusClick={(status) => {
               setInvoiceStatusFilter(status);
-              setActiveTab("invoices");
+              navigateToTab("invoices");
             }}
           />
         )}
@@ -3078,7 +3073,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                       {filteredVendors.map((vendor, index) => {
                         const theme = colorsList[index % colorsList.length];
-                        const shareLink = `${window.location.origin}${window.location.pathname}?token=${vendor.token}`;
+                        const shareLink = `${window.location.origin}/?token=${vendor.token}`;
                         const initials = vendor.name ? vendor.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() : "V";
 
                         return (
@@ -3266,7 +3261,7 @@ export default function App({ initialVendorToken = null }: AppProps) {
                       <tbody className="bg-white divide-y divide-gray-100">
                         {filteredVendors.map((vendor, index) => {
                           const theme = colorsList[index % colorsList.length];
-                          const shareLink = `${window.location.origin}${window.location.pathname}?token=${vendor.token}`;
+                          const shareLink = `${window.location.origin}/?token=${vendor.token}`;
                           return (
                             <tr key={vendor.id} className="hover:bg-gray-50/30 transition-colors">
                               <td className="px-6 py-4 whitespace-nowrap">

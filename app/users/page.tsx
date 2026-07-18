@@ -116,7 +116,7 @@ export default function UsersPage() {
     <div className="min-h-screen bg-gray-50/50">
       <div className="max-w-4xl mx-auto p-4 sm:p-8 space-y-6">
         <Link
-          href="/"
+          href="/dashboard"
           className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-orange-600 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
