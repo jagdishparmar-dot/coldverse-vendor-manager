@@ -22,11 +22,21 @@ Admin console tabs map to App Router paths while `src/App.tsx` remains the share
 
 Route map: `src/constants/adminRoutes.ts`
 
-## Phase 2 (paused) — extract page modules
+## Phase 2 (done) — extract page modules
 
-Paused after a failed extraction attempt. `src/App.tsx` was restored from git (`HEAD` / pre–Phase 1 working tree) and Phase 1 URL wiring was re-applied cleanly. Incomplete `src/features/admin` extraction was removed.
+Admin tab UI lives under `src/features/admin/views/`:
 
-When restarting Phase 2, extract one tab at a time (start with dashboard/hubs/kyc wrappers) and keep a git commit after each successful extract. Avoid large automated rewrites of `App.tsx`.
+| View | Tab |
+|------|-----|
+| `DashboardView` | Analytics |
+| `VendorsView` | Manage Vendors |
+| `InvoicesView` | Invoice logs |
+| `HubsView` | Logistics Hubs |
+| `RemarksView` | Remarks Summary |
+| `KycView` | KYC Approvals |
+| `ArchiveView` | Archive |
+
+Shared helpers: `src/features/admin/utils.ts`. `App.tsx` still owns data fetching, modals, portal mode, and print/preview.
 
 ## Phase 3 — portal route
 
