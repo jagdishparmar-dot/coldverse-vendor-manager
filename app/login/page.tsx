@@ -75,7 +75,7 @@ function LoginForm() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 className="h-10 rounded-xl border-gray-200 focus-visible:border-orange-300 focus-visible:ring-orange-100"
-                placeholder="admin@coldverse.com"
+                placeholder="admin@shreemaruti.com"
               />
             </div>
 
@@ -123,7 +123,7 @@ function LoginForm() {
         </div>
 
         <p className="text-center text-[11px] text-slate-400 mt-6">
-          Coldverse Supply Chain Pvt. Ltd.
+          Shree Maruti Integrated Logistics Limited
         </p>
       </div>
     </div>

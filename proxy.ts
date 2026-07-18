@@ -19,6 +19,14 @@ function isPublicApi(pathname: string, method: string): boolean {
     return true;
   }
 
+  if (pathname === "/api/vendors/kyc/submit" && method === "POST") {
+    return true;
+  }
+
+  if (pathname.startsWith("/api/vendors/kyc/download/")) {
+    return true;
+  }
+
   if (pathname === "/api/invoices/upload" && method === "POST") {
     return true;
   }

@@ -33,11 +33,14 @@ import {
   LayoutGrid,
   List,
 } from "lucide-react";
-import { Vendor, Invoice, Hub } from "./types";
+import { Vendor, Invoice, Hub, CompanyProfile } from "./types";
 import BulkUpload from "./components/BulkUpload";
 import VendorForm from "./components/VendorForm";
 import DashboardStats from "./components/DashboardStats";
 import HubsManagement from "./components/HubsManagement";
+import PortalKycGate from "./components/PortalKycGate";
+import PortalInvoiceGenerator from "./components/PortalInvoiceGenerator";
+import AdminKycTab from "./components/AdminKycTab";
 import { SmileLogo } from "./components/Logo";
 import { exportInvoicesToExcel, exportVendorsToExcel } from "./utils/excelExport";
 import { ColdverseSelect } from "@/src/components/coldverse-select";
@@ -64,11 +67,16 @@ const MONTH_FILTER_OPTIONS = [
 
 const ALL_CATEGORIES = ["Rent", "Manpower", "Vehicle rent", "Repairs & maintenance", "Electricity", "Others"];
 
-export default function App() {
+type AppProps = {
+  /** When present, App stays in vendor-portal mode only (never renders admin UI). */
+  initialVendorToken?: string | null;
+};
+
+export default function App({ initialVendorToken = null }: AppProps) {
   const { data: session } = useSession();
 
-  // Routing State based on URL Search Query Token
-  const [vendorToken, setVendorToken] = useState<string | null>(null);
+  // Routing State based on URL Search Query Token — seed from URL so portal never flashes admin UI
+  const [vendorToken, setVendorToken] = useState<string | null>(initialVendorToken);
   const [allCategories, setAllCategories] = useState<string[]>(ALL_CATEGORIES);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -92,7 +100,7 @@ export default function App() {
   const [hubs, setHubs] = useState<Hub[]>([]);
   
   // UI states
-  const [activeTab, setActiveTab] = useState<"dashboard" | "vendors" | "invoices" | "hubs" | "archive" | "remarks">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "vendors" | "invoices" | "hubs" | "archive" | "remarks" | "kyc">("dashboard");
   const [showSingleVendorModal, setShowSingleVendorModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [vendorViewMode, setVendorViewMode] = useState<"grid" | "table">("grid");
@@ -277,7 +285,7 @@ export default function App() {
               />
             ) : (
               <div className="border-2 border-dashed border-slate-400 rounded-2xl p-12 bg-white text-center text-sm text-slate-800 max-w-xl mx-auto my-auto">
-                <h2 className="font-extrabold text-2xl mb-4 text-slate-900">Coldverse Supply Chain</h2>
+                <h2 className="font-extrabold text-2xl mb-4 text-slate-900">Shree Maruti</h2>
                 <h3 className="font-bold text-lg mb-2 text-slate-800">Non-Image Document Attachment</h3>
                 <p className="text-xs font-mono text-slate-600 mb-6">File: {activePrintInvoice.fileName} ({activePrintInvoice.fileType || "Unknown format"})</p>
                 <p className="text-xs text-slate-500 font-medium">Please download this file from your dashboard for full contents.</p>
@@ -327,7 +335,7 @@ export default function App() {
                         <SmileLogo className="h-8 w-auto" showText={false} />
                       </div>
                       <p className="text-[9px] text-gray-500 font-bold tracking-wider uppercase">
-                        Coldverse Supply Chain Pvt. Ltd.
+                        Shree Maruti Integrated Logistics Limited
                       </p>
                       <p className="text-[8px] text-gray-400">
                         Corporate Off: Navrangpura, Ahmedabad, Gujarat - 380009
@@ -424,7 +432,7 @@ export default function App() {
                       <div className="h-12 flex flex-col justify-end">
                         <div className="border-t border-dashed border-slate-300 pt-1 inline-block w-40">
                           <p className="font-bold text-slate-600">Authorized Officer Stamp</p>
-                          <p className="text-[8px] text-slate-400">Coldverse Accounts Desk</p>
+                          <p className="text-[8px] text-slate-400">Shree Maruti Accounts Desk</p>
                         </div>
                       </div>
                     </div>
@@ -464,7 +472,7 @@ export default function App() {
                   <SmileLogo className="h-10 w-auto" showText={false} />
                 </div>
                 <p className="text-[10px] text-gray-600 font-bold tracking-wider uppercase leading-none mt-1">
-                  Coldverse Supply Chain Pvt. Ltd.
+                  Shree Maruti Integrated Logistics Limited
                 </p>
                 <p className="text-[9px] text-gray-500 mt-1">
                   Corporate Head Office: Navrangpura, Ahmedabad, Gujarat - 380009
@@ -562,7 +570,7 @@ export default function App() {
                 <div className="h-16 flex flex-col justify-end">
                   <div className="border-t border-dashed border-slate-400 pt-1.5 inline-block w-48">
                     <p className="font-bold text-slate-700">Authorized Treasury Officer</p>
-                    <p className="text-[10px] text-slate-400">Coldverse Supply Chain Pvt. Ltd.</p>
+                    <p className="text-[10px] text-slate-400">Shree Maruti Integrated Logistics Limited</p>
                   </div>
                 </div>
               </div>
@@ -577,13 +585,15 @@ export default function App() {
   
   // Loading states
   const [adminLoading, setAdminLoading] = useState(true);
-  const [portalLoading, setPortalLoading] = useState(true);
+  // Portal Mode Detection
+  const [portalLoading, setPortalLoading] = useState(() => Boolean(initialVendorToken));
   
   // Portal States (for logged-in vendor)
   const [currentVendor, setCurrentVendor] = useState<Vendor | null>(null);
   const [portalInvoices, setPortalInvoices] = useState<any[]>([]);
   const [portalError, setPortalError] = useState("");
   const [portalHubs, setPortalHubs] = useState<Hub[]>([]);
+  const [portalCompany, setPortalCompany] = useState<CompanyProfile | null>(null);
 
   // OTP Verification States
   const [isOtpVerified, setIsOtpVerified] = useState(false);
@@ -594,7 +604,6 @@ export default function App() {
   const [otpError, setOtpError] = useState("");
   const [isRequestingOtp, setIsRequestingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-  const [simulatedSmsToast, setSimulatedSmsToast] = useState<{ otp: string; phone: string; name: string } | null>(null);
 
   // Portal Edit Invoice states
   const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
@@ -623,18 +632,25 @@ export default function App() {
   const [pUploadError, setPUploadError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [portalSubMode, setPortalSubMode] = useState<"upload" | "generate">("upload");
+  const [pHardCopySubmittedTo, setPHardCopySubmittedTo] = useState("");
+  const [pHardCopySubmissionDate, setPHardCopySubmissionDate] = useState("");
 
-  // Parse Token on Mount
+  // Parse Token on Mount — portal links must never load admin data or UI
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
+    const token = params.get("token") || initialVendorToken;
+
     if (token) {
       setVendorToken(token);
+      setPortalLoading(true);
       fetchPortalData(token);
-    } else {
-      fetchAdminData();
+      return;
     }
-  }, []);
+
+    setVendorToken(null);
+    fetchAdminData();
+  }, [initialVendorToken]);
 
   // Auto-refresh timer for Admin Console
   useEffect(() => {
@@ -686,6 +702,7 @@ export default function App() {
       setCurrentVendor(data.vendor);
       setPortalInvoices(data.invoices);
       setPortalHubs(data.hubs || []);
+      setPortalCompany(data.company || null);
       setIsOtpVerified(true);
       
       if (data.categories) {
@@ -724,14 +741,6 @@ export default function App() {
       }
 
       setOtpRequested(true);
-      // Display simulated SMS toast for effortless workspace testing!
-      if (data.otp && portalCheckedVendor) {
-        setSimulatedSmsToast({
-          otp: data.otp,
-          phone: otpPhone,
-          name: portalCheckedVendor.name
-        });
-      }
     } catch (err: any) {
       setOtpError(err.message || "Failed to send OTP.");
     } finally {
@@ -761,6 +770,7 @@ export default function App() {
       setCurrentVendor(data.vendor);
       setPortalInvoices(data.invoices);
       setPortalHubs(data.hubs || []);
+      setPortalCompany(data.company || null);
       if (data.categories) {
         setAllCategories(data.categories);
       }
@@ -773,7 +783,6 @@ export default function App() {
       }
 
       setIsOtpVerified(true);
-      setSimulatedSmsToast(null); // Clear simulated toast
     } catch (err: any) {
       setOtpError(err.message || "OTP verification failed.");
     } finally {
@@ -1045,6 +1054,7 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           vendorId: currentVendor.id,
+          token: vendorToken,
           category: pCategory,
           invoiceNumber: pInvoiceNo.trim(),
           amount: amt,
@@ -1055,7 +1065,9 @@ export default function App() {
           state: pState,
           hubId: pHubId,
           hubName: portalHubs.find(h => h.id === pHubId)?.name || "",
-          remarks: pRemarks.trim()
+          remarks: pRemarks.trim(),
+          hardCopySubmittedTo: pHardCopySubmittedTo.trim(),
+          hardCopySubmissionDate: pHardCopySubmissionDate,
         }),
       });
 
@@ -1073,6 +1085,8 @@ export default function App() {
       setPState("");
       setPHubId("");
       setPRemarks("");
+      setPHardCopySubmittedTo("");
+      setPHardCopySubmissionDate("");
       setPSelectedFile(null);
       setPBase64File(null);
       
@@ -1433,7 +1447,8 @@ export default function App() {
   const monthlyTrendData = getMonthlyTrendData();
 
   // ================= VENDOR PORTAL RENDERING =================
-  if (vendorToken) {
+  // Any portal token keeps the UI locked to vendor portal (no admin dashboard flash).
+  if (vendorToken || initialVendorToken) {
     if (portalLoading) {
       return (
         <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6">
@@ -1450,15 +1465,9 @@ export default function App() {
             <AlertCircle className="w-8 h-8 stroke-[1.5]" />
           </div>
           <h2 className="text-xl font-display font-bold text-gray-950">Invalid Access Token</h2>
-          <p className="text-sm text-gray-500 max-w-sm mt-1 mb-6">
-            The billing upload URL you followed is expired, revoked, or formatted incorrectly. Please reach out to your Accounts Manager.
+          <p className="text-sm text-gray-500 max-w-sm mt-1">
+            The billing upload URL you followed is expired, revoked, or formatted incorrectly. Please reach out to your Accounts Manager for a new portal link.
           </p>
-          <a
-            href="/"
-            className="px-5 py-2.5 bg-violet-600 text-white font-medium rounded-xl text-sm shadow-sm hover:bg-violet-700 transition-all"
-          >
-            Go to Admin Dashboard
-          </a>
         </div>
       );
     }
@@ -1539,7 +1548,6 @@ export default function App() {
                         setOtpRequested(false);
                         setOtpCode("");
                         setOtpError("");
-                        setSimulatedSmsToast(null);
                       }}
                       className="text-violet-600 hover:underline font-bold text-[10px] uppercase"
                     >
@@ -1548,7 +1556,7 @@ export default function App() {
                   </div>
                   <p className="text-[10px] text-emerald-600 font-medium leading-none flex items-center gap-1">
                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse inline-block"></span>
-                    OTP has been generated & logged successfully.
+                    OTP has been sent to your registered mobile number.
                   </p>
                 </div>
 
@@ -1598,59 +1606,31 @@ export default function App() {
               By logging in, you agree to secure transport protocol safeguards.
             </div>
           </div>
+        </div>
+      );
+    }
 
-          {/* SIMULATED SMS TOAST POPUP (Premium design for effortless workspace developer evaluation) */}
-          {simulatedSmsToast && (
-            <div className="fixed bottom-6 right-6 max-w-sm w-full bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-800 p-4 z-50 animate-bounce transition-all space-y-2">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2 text-amber-400">
-                  <span className="text-base">💬</span>
-                  <span className="text-[10px] font-black uppercase tracking-wider">Simulated Carrier SMS</span>
-                </div>
-                <button
-                  onClick={() => setSimulatedSmsToast(null)}
-                  className="text-slate-400 hover:text-white font-mono text-xs p-1"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="text-xs leading-relaxed text-slate-200">
-                <p>New Message from <strong className="text-white">Maruti Portal</strong>:</p>
-                <p className="mt-1">
-                  Dear <span className="font-semibold text-white">{simulatedSmsToast.name}</span>, your secure OTP for portal verification is: 
-                  <strong className="text-lg text-amber-300 ml-1 font-mono tracking-wider">{simulatedSmsToast.otp}</strong>. 
-                  Valid for 5 minutes.
-                </p>
-              </div>
-              <div className="pt-1 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOtpCode(simulatedSmsToast.otp);
-                  }}
-                  className="bg-amber-400 hover:bg-amber-500 text-slate-950 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all"
-                >
-                  Auto-Fill Code
-                </button>
-              </div>
-            </div>
-          )}
+    if (!currentVendor) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6">
+          <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin"></div>
+          <p className="text-sm font-medium text-slate-500 mt-4">Preparing your vendor portal...</p>
         </div>
       );
     }
 
     return (
       <>
-        <div id="vendor-portal-root" className="min-h-screen bg-gray-50/50 flex flex-col screen-only">
+        <div id="vendor-portal-root" className="min-h-screen w-full bg-gray-50/50 flex flex-col screen-only">
         {/* Top Navigation Bar */}
-        <nav className="bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-8 shadow-sm">
-          <div className="max-w-4xl mx-auto flex h-16 justify-between items-center">
+        <nav className="bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-10 xl:px-12 shadow-sm w-full">
+          <div className="w-full max-w-[1600px] mx-auto flex h-16 justify-between items-center">
             <div className="flex items-center gap-4">
-              <SmileLogo />
+              <SmileLogo showText={false} />
               <div className="h-8 w-[1.5px] bg-slate-200 hidden sm:block"></div>
               <div className="hidden sm:block leading-none">
                 <h1 className="text-xs font-black text-slate-800 uppercase tracking-wider font-sans">
-                  Coldverse Supply Chain Pvt. Ltd.
+                  Shree Maruti Integrated Logistics Limited
                 </h1>
                 <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">
                   Secure Billing Portal
@@ -1670,7 +1650,7 @@ export default function App() {
           </div>
         </nav>
 
-        <div className="flex-1 max-w-4xl w-full mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+        <div className="flex-1 w-full max-w-[1600px] mx-auto py-8 sm:py-10 px-4 sm:px-6 lg:px-10 xl:px-12 space-y-8">
           
           {/* Header Info Banner */}
           <div className="bg-blue-950 rounded-2xl border border-blue-900 p-6 md:p-8 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-white">
@@ -1702,21 +1682,41 @@ export default function App() {
             </div>
           </div>
 
+          {currentVendor.kycStatus !== "verified" && vendorToken ? (
+            <PortalKycGate
+              vendor={currentVendor}
+              vendorToken={vendorToken}
+              onVendorUpdated={(vendor) => {
+                setCurrentVendor(vendor);
+                if (vendor.kycStatus === "verified" && vendorToken) {
+                  fetchPortalData(vendorToken);
+                }
+              }}
+            />
+          ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            {/* Left Column: The Invoice Upload Wizard */}
-            <div className="lg:col-span-7 space-y-6">
+            {/* Left Column: Primary upload + optional creator */}
+            <div className={`${portalSubMode === "generate" ? "lg:col-span-12" : "lg:col-span-7"} space-y-6`}>
               <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                <h2 className="text-lg font-display font-semibold text-gray-900 mb-4">Upload Monthly Invoice</h2>
+                <div className="flex justify-between items-center mb-2">
+                  <h2 className="text-lg font-display font-semibold text-gray-900">Submit Invoice</h2>
+                  <span className="text-[10px] bg-violet-100 text-violet-700 font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                    Portal Active
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mb-6">
+                  Upload your existing tax invoice file. Invoice creator is optional if you need to generate a PDF here.
+                </p>
 
                 {pSuccessMsg && (
                   <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-800 space-y-3">
                     <div className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-semibold text-sm">Invoice Uploaded Successfully!</p>
+                        <p className="font-semibold text-sm">Action Completed Successfully!</p>
                         <p className="text-xs text-emerald-700 mt-0.5">
-                          The accounts team has been notified. You can see your uploaded logs below.
+                          {pSuccessMsg}
                         </p>
                       </div>
                     </div>
@@ -1729,6 +1729,7 @@ export default function App() {
                   </div>
                 )}
 
+                {portalSubMode !== "generate" && (
                 <form onSubmit={handleInvoiceSubmit} className="space-y-4">
                   {/* Category Picker */}
                   <div className="space-y-1.5">
@@ -1906,6 +1907,31 @@ export default function App() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        Hard Copy Submitted To (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Finance Desk / Hub Manager"
+                        value={pHardCopySubmittedTo}
+                        onChange={(e) => setPHardCopySubmittedTo(e.target.value)}
+                        className="w-full text-sm px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        Hard Copy Submission Date
+                      </label>
+                      <ColdverseDateField
+                        value={pHardCopySubmissionDate}
+                        onValueChange={setPHardCopySubmissionDate}
+                        placeholder="Optional date"
+                      />
+                    </div>
+                  </div>
+
                   {pUploadError && (
                     <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 shrink-0" />
@@ -1930,15 +1956,84 @@ export default function App() {
                     ) : (
                       <>
                         <Send className="w-4 h-4" />
-                        Submit Invoice
+                        Upload &amp; Submit Invoice
                       </>
                     )}
                   </button>
                 </form>
+                )}
+
+                {/* Optional creator — secondary path */}
+                {vendorToken && (
+                  <div className={`${portalSubMode === "generate" ? "mt-2" : "mt-6"} border-t border-dashed border-gray-200 pt-5`}>
+                    {portalSubMode !== "generate" ? (
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-slate-500" />
+                            Need to create an invoice?
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Optional — generate a GST tax invoice PDF with templates, then submit it from here.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPortalSubMode("generate");
+                            setPUploadError("");
+                            setPSuccessMsg(null);
+                          }}
+                          className="shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 cursor-pointer"
+                        >
+                          Open invoice creator
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-slate-800">Invoice creator</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPortalSubMode("upload");
+                              setPUploadError("");
+                            }}
+                            className="text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
+                          >
+                            ← Back to upload
+                          </button>
+                        </div>
+                        <PortalInvoiceGenerator
+                          vendor={currentVendor}
+                          vendorToken={vendorToken}
+                          categories={allCategories}
+                          portalHubs={portalHubs}
+                          company={portalCompany}
+                          onSuccess={(message) => {
+                            setPSuccessMsg(message);
+                            setPUploadError("");
+                            setPortalSubMode("upload");
+                            if (vendorToken) fetchPortalData(vendorToken);
+                          }}
+                          onError={(message) => setPUploadError(message)}
+                          onClose={() => setPortalSubMode("upload")}
+                        />
+                        {pUploadError && portalSubMode === "generate" && (
+                          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>{pUploadError}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Right Column: Portal Upload History */}
+            {portalSubMode !== "generate" && (
             <div className="lg:col-span-5 space-y-6">
               <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm flex flex-col justify-between h-full min-h-[400px]">
                 <div>
@@ -2077,7 +2172,9 @@ export default function App() {
                 </div>
               </div>
             </div>
+            )}
           </div>
+          )}
         </div>
       </div>
       
@@ -2274,11 +2371,11 @@ export default function App() {
       <nav className="bg-white border-b border-gray-100 sticky top-0 z-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex h-16 justify-between items-center">
           <div className="flex items-center gap-4">
-            <SmileLogo />
+            <SmileLogo showText={false} />
             <div className="h-8 w-[1.5px] bg-slate-200 hidden md:block"></div>
             <div className="hidden md:block leading-none">
               <h1 className="text-xs font-black text-slate-800 uppercase tracking-wider font-sans">
-                Coldverse Supply Chain Pvt. Ltd.
+                Shree Maruti Integrated Logistics Limited
               </h1>
               <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">
                 Vendor Billing & Invoices Console
@@ -2383,6 +2480,21 @@ export default function App() {
               }`}
             >
               Remarks Summary
+            </button>
+            <button
+              onClick={() => setActiveTab("kyc")}
+              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-all cursor-pointer shrink-0 relative ${
+                activeTab === "kyc"
+                  ? "bg-orange-600 text-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
+              }`}
+            >
+              KYC Approvals
+              {vendors.filter((v) => v.kycStatus === "pending_verification").length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">
+                  {vendors.filter((v) => v.kycStatus === "pending_verification").length}
+                </span>
+              )}
             </button>
           </div>
           {headerHubFilter !== "All" && (
@@ -2631,7 +2743,7 @@ export default function App() {
         )}
 
         {/* Global Filters Panel */}
-        {activeTab !== "vendors" && activeTab !== "archive" && (
+        {activeTab !== "vendors" && activeTab !== "archive" && activeTab !== "kyc" && (
           <div id="global-filters-panel" className="bg-white rounded-2xl border-y border-r border-l-4 border-l-orange-500 border-gray-100 p-5 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex items-center gap-2">
@@ -3287,6 +3399,11 @@ export default function App() {
             </div>
           );
         })()}
+
+        {/* Tab: KYC Approvals */}
+        {activeTab === "kyc" && (
+          <AdminKycTab vendors={vendors} onRefresh={fetchAdminData} />
+        )}
 
         {/* Tab 3: Invoice Logs View */}
         {activeTab === "invoices" && (

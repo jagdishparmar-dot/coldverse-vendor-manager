@@ -43,6 +43,7 @@ export async function createVendor(body: {
       state: finalState,
       states: finalStates,
       hubIds: Array.isArray(hubs) ? hubs : [],
+      kycStatus: "pending_submission",
     },
   });
 
@@ -102,6 +103,7 @@ export async function bulkCreateVendors(vendorsList: unknown[]) {
           state: (statesVal as string[]).join(", "),
           states: statesVal as string[],
           hubIds: hubsVal as string[],
+          kycStatus: "pending_submission",
         },
       });
       added.push(vendorToApi(vendor));

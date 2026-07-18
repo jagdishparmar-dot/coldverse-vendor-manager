@@ -24,7 +24,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Coldverse Vendor Billing",
+  title: "Shree Maruti Vendor Billing",
   description: "Vendor billing and invoice management portal",
 };
 

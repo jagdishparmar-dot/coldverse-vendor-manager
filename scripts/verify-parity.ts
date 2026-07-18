@@ -21,6 +21,9 @@ function testExpectedRoutes() {
     "/api/vendors/portal-check/[token]",
     "/api/vendors/portal-otp/send",
     "/api/vendors/portal-otp/verify",
+    "/api/vendors/kyc/submit",
+    "/api/vendors/[id]/kyc/verify",
+    "/api/vendors/kyc/download/[id]",
     "/api/invoices",
     "/api/invoices/upload",
     "/api/invoices/[id]",
@@ -29,6 +32,7 @@ function testExpectedRoutes() {
     "/api/invoices/view/[id]",
     "/api/categories",
     "/api/stats",
+    "/api/company",
     "/api/hubs",
     "/api/hubs/bulk",
     "/api/hubs/[id]",
@@ -36,7 +40,7 @@ function testExpectedRoutes() {
     "/api/archive/restore/[type]/[id]",
   ];
 
-  assert(expected.length === 20, `Expected 20 API route groups, got ${expected.length}`);
+  assert(expected.length === 24, `Expected 24 API route groups, got ${expected.length}`);
 }
 
 function main() {

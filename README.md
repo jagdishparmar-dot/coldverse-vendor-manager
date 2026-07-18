@@ -1,6 +1,6 @@
-# Next.js Vendor Billing App
+# Shree Maruti Vendor Billing
 
-Next.js migration of the vendor billing management app with PostgreSQL (Prisma) and S3-compatible invoice storage.
+Next.js vendor billing management app for **Shree Maruti Integrated Logistics Limited**, with PostgreSQL (Prisma) and S3-compatible invoice storage.
 
 ## Prerequisites
 
@@ -57,9 +57,9 @@ cp .env.example .env
 ```env
 BETTER_AUTH_SECRET=""          # openssl rand -base64 32
 BETTER_AUTH_URL="http://localhost:3000"
-SEED_ADMIN_EMAIL="admin@coldverse.com"
+SEED_ADMIN_EMAIL="admin@shreemaruti.com"
 SEED_ADMIN_PASSWORD="ChangeMe123!"
-SEED_ADMIN_NAME="Coldverse Admin"
+SEED_ADMIN_NAME="Shree Maruti Admin"
 ```
 
 3. Apply database schema:
@@ -90,7 +90,7 @@ The admin console requires email/password login via [better-auth](https://www.be
 - **Profile & password:** `/profile`
 - **User management (admin role only):** `/users`
 
-After running `npm run db:seed`, sign in with the credentials from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in your `.env` (default dev: `admin@coldverse.com` / `ChangeMe123!`). Change the password after first login.
+After running `npm run db:seed`, sign in with the credentials from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in your `.env` (default dev: `admin@shreemaruti.com` / `ChangeMe123!`). Change the password after first login.
 
 From the repository root, you can also run:
 
@@ -108,12 +108,12 @@ All endpoints match the legacy Express app under `/api/*`:
 
 ## UI components
 
-Form dropdowns and date fields use [shadcn/ui](https://ui.shadcn.com) wrapped in Coldverse-themed components:
+Form dropdowns and date fields use [shadcn/ui](https://ui.shadcn.com) wrapped in branded components:
 
 - `src/components/coldverse-select.tsx` — styled Select (violet/orange focus variants)
 - `src/components/coldverse-date-field.tsx` — Popover + Calendar date picker
 
-shadcn primitives live in `components/ui/`. Theme tokens in `app/globals.css` map to Coldverse violet (`#1a4294`).
+shadcn primitives live in `components/ui/`. Theme tokens in `app/globals.css` map to the Shree Maruti brand palette (`#1a4294`).
 
 ## Legacy App
 
@@ -143,7 +143,7 @@ docker run -p 3000:3000 \
   -e S3_BUCKET_NAME="coldverse-invoices" \
   -e RUN_DB_MIGRATIONS=true \
   -e SEED_ADMIN_ON_STARTUP=true \
-  -e SEED_ADMIN_EMAIL="admin@coldverse.com" \
+  -e SEED_ADMIN_EMAIL="admin@shreemaruti.com" \
   -e SEED_ADMIN_PASSWORD="ChangeMe123!" \
   coldverse-vendors
 ```

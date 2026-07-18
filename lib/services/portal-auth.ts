@@ -62,10 +62,10 @@ export async function sendPortalOtp(token: string, phone: string) {
     `[OTP Portal Service] Generated OTP for ${vendor.name} (${phone}): ${generatedOtp}`
   );
 
+  // OTP is not returned to the client. Wire an SMS provider here later.
   return {
     success: true,
     message: "OTP sent to registered mobile number.",
-    otp: generatedOtp,
   };
 }
 

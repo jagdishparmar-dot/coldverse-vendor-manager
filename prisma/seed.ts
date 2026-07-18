@@ -63,6 +63,11 @@ const defaultHubs = [
     name: "Ahmedabad Main Hub",
     code: "AMD-01",
     state: "Gujarat",
+    stateCode: "24",
+    address: "SG Highway Logistics Park",
+    city: "Ahmedabad",
+    pincode: "380051",
+    gstin: "24AABCC0000A1Z5",
     createdAt: new Date(),
   },
   {
@@ -70,6 +75,11 @@ const defaultHubs = [
     name: "Mumbai Distribution Center",
     code: "BOM-02",
     state: "Maharashtra",
+    stateCode: "27",
+    address: "Bhiwandi Warehousing Zone",
+    city: "Mumbai",
+    pincode: "400001",
+    gstin: "27AABCC0000A1Z2",
     createdAt: new Date(),
   },
   {
@@ -77,6 +87,11 @@ const defaultHubs = [
     name: "Delhi Cargo Terminal",
     code: "DEL-03",
     state: "Delhi",
+    stateCode: "07",
+    address: "Okhla Industrial Area",
+    city: "New Delhi",
+    pincode: "110020",
+    gstin: "07AABCC0000A1Z5",
     createdAt: new Date(),
   },
   {
@@ -84,6 +99,11 @@ const defaultHubs = [
     name: "Bengaluru Logistics Hub",
     code: "BLR-04",
     state: "Karnataka",
+    stateCode: "29",
+    address: "Whitefield Industrial Estate",
+    city: "Bengaluru",
+    pincode: "560066",
+    gstin: "29AABCC0000A1Z0",
     createdAt: new Date(),
   },
 ];
@@ -224,6 +244,22 @@ async function main() {
   await prisma.vendor.deleteMany();
   await prisma.hub.deleteMany();
   await prisma.category.deleteMany();
+  await prisma.companyProfile.deleteMany();
+
+  await prisma.companyProfile.create({
+    data: {
+      id: "default",
+      legalName: "Shree Maruti Integrated Logistics Limited",
+      tradeName: "Shree Maruti",
+      pan: "AABCC0000A",
+      email: "accounts@shreemaruti.com",
+      phone: "+91 79 0000 0000",
+      registeredAddress: "Corporate Billing & Logistics Compliance Desk, SG Highway",
+      registeredState: "Gujarat",
+      registeredStateCode: "24",
+      registeredGstin: "24AABCC0000A1Z5",
+    },
+  });
 
   for (const name of defaultCategories) {
     await prisma.category.create({ data: { name } });
@@ -239,6 +275,19 @@ async function main() {
         ...vendor,
         states: [],
         hubIds: [],
+        kycStatus: "verified",
+        kycDetails: {
+          panNumber: "AAAPL1234C",
+          companyType: "Private Limited Company (Pvt Ltd)",
+          bankName: "HDFC Bank",
+          accountNumber: "50100123456789",
+          ifscCode: "HDFC0001234",
+          beneficiaryName: vendor.name,
+          address: "Registered Office, Sector-IV, Industrial Area",
+          submittedAt: new Date().toISOString(),
+          verifiedAt: new Date().toISOString(),
+          remarks: "",
+        },
       },
     });
   }

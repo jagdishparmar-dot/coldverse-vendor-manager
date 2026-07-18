@@ -4,6 +4,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { NodeHttpHandler } from "@smithy/node-http-handler";
+import fs from "fs";
 import https from "https";
 import path from "path";
 import { Readable } from "stream";
@@ -16,6 +17,45 @@ function readEnv(...keys: string[]): string | undefined {
     }
   }
   return undefined;
+}
+
+function getStorageDriver(): "local" | "s3" {
+  const driver = (readEnv("STORAGE_DRIVER", "S3_STORAGE_DRIVER") || "s3").toLowerCase();
+  return driver === "local" || driver === "filesystem" || driver === "disk"
+    ? "local"
+    : "s3";
+}
+
+function getLocalUploadsDir(): string {
+  const configured = readEnv("LOCAL_UPLOADS_DIR", "UPLOADS_DIR");
+  return configured
+    ? path.resolve(configured)
+    : path.join(process.cwd(), "uploads");
+}
+
+function ensureLocalUploadsDir(): string {
+  const dir = getLocalUploadsDir();
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function sanitizeStorageKey(key: string): string {
+  const safe = path.basename(key);
+  if (!safe || safe === "." || safe === "..") {
+    throw new Error("Invalid storage key.");
+  }
+  return safe;
+}
+
+function guessContentType(key: string): string {
+  const ext = path.extname(key).toLowerCase();
+  if (ext === ".html" || ext === ".htm") return "text/html; charset=utf-8";
+  if (ext === ".pdf") return "application/pdf";
+  if (ext === ".png") return "image/png";
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  if (ext === ".webp") return "image/webp";
+  if (ext === ".txt") return "text/plain; charset=utf-8";
+  return "application/octet-stream";
 }
 
 function isCustomS3Endpoint(endpoint?: string): boolean {
@@ -54,7 +94,7 @@ function getS3Config() {
 
   if (missing.length > 0) {
     throw new Error(
-      `S3 storage is not configured. Set ${missing.join(", ")} in next-app/.env`
+      `S3 storage is not configured. Set ${missing.join(", ")} in next-app/.env (or set STORAGE_DRIVER=local for local filesystem uploads).`
     );
   }
 
@@ -80,6 +120,7 @@ function getS3Client() {
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,
     },
+    maxAttempts: 2,
   };
 
   const httpsAgent = new https.Agent({
@@ -88,7 +129,7 @@ function getS3Client() {
 
   clientConfig.requestHandler = new NodeHttpHandler({
     httpsAgent,
-    connectionTimeout: 10_000,
+    connectionTimeout: 8_000,
     socketTimeout: 30_000,
   });
 
@@ -96,6 +137,9 @@ function getS3Client() {
 }
 
 export function getS3Bucket(): string {
+  if (getStorageDriver() === "local") {
+    return "local-uploads";
+  }
   return getS3Config().bucket;
 }
 
@@ -107,45 +151,134 @@ export function buildInvoiceKey(vendorId: string, fileName?: string): string {
   return `${vendorId}-${Date.now()}-${baseName}${fileExt}`;
 }
 
+export function buildKycKey(
+  vendorId: string,
+  docType: "kyc" | "pan" | "gst" | "msme" | "other",
+  fileName?: string
+): string {
+  const fileExt = fileName ? path.extname(fileName) : ".pdf";
+  const baseName = fileName
+    ? path.basename(fileName, fileExt).replace(/[^a-zA-Z0-9]/g, "_")
+    : `${docType}_doc`;
+  const prefix = docType === "kyc" ? "kyc" : `kyc-${docType}`;
+  return `${prefix}-${vendorId}-${Date.now()}-${baseName}${fileExt}`;
+}
+
+function toStorageError(error: unknown): Error {
+  const message =
+    error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : String(error);
+
+  const isTimeout =
+    /TimeoutError|timed out|ECONNREFUSED|ENOTFOUND|ECONNRESET|socket hang up|network/i.test(
+      message
+    );
+
+  if (isTimeout) {
+    const endpoint = readEnv("S3_ENDPOINT", "AWS_ENDPOINT_URL") || "S3 endpoint";
+    return new Error(
+      `Object storage is unreachable (${endpoint}). Check network/VPN/firewall, verify S3_ENDPOINT, or set STORAGE_DRIVER=local in next-app/.env for local development.`
+    );
+  }
+
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error(message || "Storage upload failed.");
+}
+
+async function uploadLocalFile(key: string, buffer: Buffer): Promise<string> {
+  const dir = ensureLocalUploadsDir();
+  const safeKey = sanitizeStorageKey(key);
+  const filePath = path.join(dir, safeKey);
+  await fs.promises.writeFile(filePath, buffer);
+  return safeKey;
+}
+
+async function getLocalObject(key: string) {
+  const dir = getLocalUploadsDir();
+  const safeKey = sanitizeStorageKey(key);
+  const filePath = path.join(dir, safeKey);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error("Invoice file not found in storage.");
+  }
+
+  return {
+    body: fs.createReadStream(filePath),
+    contentType: guessContentType(safeKey),
+  };
+}
+
 export async function uploadInvoiceFile(
   key: string,
   buffer: Buffer,
   contentType: string
 ): Promise<string> {
-  const client = getS3Client();
-  const bucket = getS3Bucket();
+  if (getStorageDriver() === "local") {
+    return uploadLocalFile(key, buffer);
+  }
 
-  await client.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-    })
-  );
+  try {
+    const client = getS3Client();
+    const bucket = getS3Bucket();
 
-  return key;
+    await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+      })
+    );
+
+    return key;
+  } catch (error) {
+    throw toStorageError(error);
+  }
+}
+
+export async function uploadKycFile(
+  key: string,
+  buffer: Buffer,
+  contentType: string
+): Promise<string> {
+  return uploadInvoiceFile(key, buffer, contentType);
 }
 
 export async function getInvoiceObject(key: string) {
-  const client = getS3Client();
-  const bucket = getS3Bucket();
-
-  const response = await client.send(
-    new GetObjectCommand({
-      Bucket: bucket,
-      Key: key,
-    })
-  );
-
-  if (!response.Body) {
-    throw new Error("Invoice file not found in storage.");
+  if (getStorageDriver() === "local") {
+    return getLocalObject(key);
   }
 
-  return {
-    body: response.Body as Readable,
-    contentType: response.ContentType || "application/octet-stream",
-  };
+  try {
+    const client = getS3Client();
+    const bucket = getS3Bucket();
+
+    const response = await client.send(
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      })
+    );
+
+    if (!response.Body) {
+      throw new Error("Invoice file not found in storage.");
+    }
+
+    return {
+      body: response.Body as Readable,
+      contentType: response.ContentType || "application/octet-stream",
+    };
+  } catch (error) {
+    throw toStorageError(error);
+  }
+}
+
+export async function getKycObject(key: string) {
+  return getInvoiceObject(key);
 }
 
 export function decodeBase64File(fileData: string): Buffer {

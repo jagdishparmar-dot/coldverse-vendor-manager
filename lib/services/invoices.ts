@@ -6,6 +6,7 @@ import {
   uploadInvoiceFile,
 } from "@/lib/storage/s3";
 import { listCategories } from "@/lib/services/categories";
+import { getCompanyProfile } from "@/lib/services/company";
 import { listHubs } from "@/lib/services/hubs";
 import { ServiceError } from "@/lib/services/utils";
 
@@ -30,6 +31,9 @@ export async function uploadInvoice(body: {
   hubId?: string;
   hubName?: string;
   remarks?: string;
+  hardCopySubmittedTo?: string;
+  hardCopySubmissionDate?: string;
+  token?: string;
 }) {
   const {
     vendorId,
@@ -44,6 +48,9 @@ export async function uploadInvoice(body: {
     hubId,
     hubName,
     remarks,
+    hardCopySubmittedTo,
+    hardCopySubmissionDate,
+    token,
   } = body;
 
   if (!vendorId || !category || !invoiceNumber || !amount || !date || !fileData) {
@@ -55,9 +62,36 @@ export async function uploadInvoice(body: {
     throw new ServiceError(404, "Vendor not found.");
   }
 
+  if (vendor.kycStatus !== "verified") {
+    throw new ServiceError(
+      403,
+      "KYC verification is required before submitting invoices."
+    );
+  }
+
+  if (token) {
+    const session = await prisma.portalSession.findUnique({ where: { token } });
+    if (!session || Date.now() > session.expiresAt.getTime()) {
+      if (session) {
+        await prisma.portalSession.delete({ where: { token } });
+      }
+      throw new ServiceError(401, "OTP Verification Required", { otpRequired: true });
+    }
+    if (vendor.token !== token) {
+      throw new ServiceError(403, "Token does not match vendor.");
+    }
+  }
+
   const uniqueFileName = buildInvoiceKey(vendorId, fileName);
   const buffer = decodeBase64File(fileData);
-  await uploadInvoiceFile(uniqueFileName, buffer, fileType || "application/octet-stream");
+
+  try {
+    await uploadInvoiceFile(uniqueFileName, buffer, fileType || "application/octet-stream");
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to store invoice file.";
+    throw new ServiceError(503, message);
+  }
 
   const invoice = await prisma.invoice.create({
     data: {
@@ -77,6 +111,8 @@ export async function uploadInvoice(body: {
       state: state || "",
       hubId: hubId || "",
       hubName: hubName || "",
+      hardCopySubmittedTo: hardCopySubmittedTo || "",
+      hardCopySubmissionDate: hardCopySubmissionDate || "",
     },
   });
 
@@ -99,6 +135,8 @@ export async function updateInvoice(
     fileName?: string;
     fileType?: string;
     fileData?: string;
+    hardCopySubmittedTo?: string;
+    hardCopySubmissionDate?: string;
   }
 ) {
   const invoice = await prisma.invoice.findUnique({ where: { id } });
@@ -119,15 +157,27 @@ export async function updateInvoice(
   if (body.state !== undefined) data.state = body.state;
   if (body.hubId !== undefined) data.hubId = body.hubId;
   if (body.hubName !== undefined) data.hubName = body.hubName;
+  if (body.hardCopySubmittedTo !== undefined) {
+    data.hardCopySubmittedTo = body.hardCopySubmittedTo;
+  }
+  if (body.hardCopySubmissionDate !== undefined) {
+    data.hardCopySubmissionDate = body.hardCopySubmissionDate;
+  }
 
   if (body.fileData) {
     const uniqueFileName = buildInvoiceKey(invoice.vendorId, body.fileName);
     const buffer = decodeBase64File(body.fileData);
-    await uploadInvoiceFile(
-      uniqueFileName,
-      buffer,
-      body.fileType || "application/octet-stream"
-    );
+    try {
+      await uploadInvoiceFile(
+        uniqueFileName,
+        buffer,
+        body.fileType || "application/octet-stream"
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to store invoice file.";
+      throw new ServiceError(503, message);
+    }
     data.fileName = body.fileName || uniqueFileName;
     data.fileType = body.fileType || "application/octet-stream";
     data.filePath = uniqueFileName;
@@ -214,10 +264,11 @@ export async function getPortalPayload(vendorId: string) {
     throw new ServiceError(404, "Invalid vendor portal link. Please check with administrator.");
   }
 
-  const [invoices, categories, hubs] = await Promise.all([
+  const [invoices, categories, hubs, company] = await Promise.all([
     getVendorPortalInvoices(vendorId),
     listCategories(),
     listHubs(),
+    getCompanyProfile(),
   ]);
 
   return {
@@ -225,5 +276,6 @@ export async function getPortalPayload(vendorId: string) {
     invoices,
     categories,
     hubs,
+    company,
   };
 }

@@ -14,6 +14,36 @@ export interface Vendor {
   state?: string;
   states?: string[];
   hubs?: string[]; // assigned hub ids
+  kycStatus?: 'pending_submission' | 'pending_verification' | 'verified' | 'rejected';
+  kycDetails?: KYCDetails;
+}
+
+export interface KYCDetails {
+  panNumber: string;
+  companyType: string;
+  bankName: string;
+  accountNumber: string;
+  ifscCode: string;
+  beneficiaryName: string;
+  address: string;
+  kycDocName?: string;
+  kycDocType?: string;
+  kycDocPath?: string;
+  panDocName?: string;
+  panDocType?: string;
+  panDocPath?: string;
+  gstDocName?: string;
+  gstDocType?: string;
+  gstDocPath?: string;
+  msmeDocName?: string;
+  msmeDocType?: string;
+  msmeDocPath?: string;
+  otherDocName?: string;
+  otherDocType?: string;
+  otherDocPath?: string;
+  submittedAt?: string;
+  verifiedAt?: string;
+  remarks?: string;
 }
 
 export interface Hub {
@@ -21,7 +51,30 @@ export interface Hub {
   name: string;
   code: string;
   state: string;
+  stateCode?: string;
+  address?: string;
+  city?: string;
+  pincode?: string;
+  gstin?: string;
+  billingAddress?: string;
   createdAt: string;
+  updatedAt?: string;
+}
+
+/** Buyer / company master used on tax invoices (Bill To). */
+export interface CompanyProfile {
+  id: string;
+  legalName: string;
+  tradeName?: string;
+  pan?: string;
+  email?: string;
+  phone?: string;
+  registeredAddress: string;
+  registeredState: string;
+  registeredStateCode?: string;
+  registeredGstin: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Invoice {
@@ -44,6 +97,8 @@ export interface Invoice {
   state?: string;
   hubId?: string;
   hubName?: string;
+  hardCopySubmittedTo?: string;
+  hardCopySubmissionDate?: string;
 }
 
 export interface VendorStats {
