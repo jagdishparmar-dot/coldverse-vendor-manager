@@ -105,8 +105,18 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
+    // Users hub is admin-only; non-admins land on profile within Settings
     if (pathname === "/users" && session.user.role !== "admin") {
-      return NextResponse.redirect(new URL(ADMIN_DEFAULT_PATH, request.url));
+      return NextResponse.redirect(new URL("/settings?tab=profile", request.url));
+    }
+
+    if (
+      pathname === "/settings" &&
+      session.user.role !== "admin" &&
+      (searchParams.get("tab") === "users" ||
+        searchParams.get("tab") === "workspace")
+    ) {
+      return NextResponse.redirect(new URL("/settings?tab=profile", request.url));
     }
 
     return NextResponse.next();
@@ -121,6 +131,7 @@ export const config = {
     "/login",
     "/profile",
     "/users",
+    "/settings",
     "/dashboard",
     "/vendors",
     "/invoices",

@@ -1,13 +1,109 @@
 import { prisma } from "@/lib/db";
 import { vendorToApi } from "@/lib/mappers";
+import { notifyVendorRegistered } from "@/lib/services/notifications";
 import { generateToken, ServiceError } from "@/lib/services/utils";
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_SIZE,
+  paginatedEnvelope,
+  type PaginatedResult,
+} from "@/lib/pagination";
+import type { Prisma } from "@/src/generated/prisma/client";
+import type { Vendor } from "@/src/types";
 
+export type ListVendorsQuery = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  hubId?: string;
+  kycStatus?: string;
+  /** Include archived vendors (default false → active only) */
+  archived?: boolean;
+};
+
+function buildVendorWhere(query: ListVendorsQuery): Prisma.VendorWhereInput {
+  const where: Prisma.VendorWhereInput = {
+    archived: query.archived === true ? true : false,
+  };
+
+  if (query.kycStatus && query.kycStatus !== "All") {
+    where.kycStatus = query.kycStatus;
+  }
+
+  if (query.hubId && query.hubId !== "All") {
+    where.hubIds = { has: query.hubId };
+  }
+
+  const search = query.search?.trim();
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+      { phone: { contains: search, mode: "insensitive" } },
+      { gstNumber: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  return where;
+}
+
+/** Full active list — portal / internal callers */
 export async function listActiveVendors() {
   const vendors = await prisma.vendor.findMany({
     where: { archived: false },
     orderBy: { createdAt: "desc" },
   });
   return vendors.map(vendorToApi);
+}
+
+/** Paginated list for admin console */
+export async function listVendorsPaginated(
+  query: ListVendorsQuery = {}
+): Promise<PaginatedResult<Vendor> & { kycCounts?: Record<string, number> }> {
+  const page = query.page && query.page > 0 ? query.page : DEFAULT_PAGE;
+  const limit =
+    query.limit && query.limit > 0
+      ? Math.min(100, query.limit)
+      : DEFAULT_PAGE_SIZE;
+  const skip = (page - 1) * limit;
+  const where = buildVendorWhere(query);
+
+  const [rows, total, kycGroups] = await Promise.all([
+    prisma.vendor.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.vendor.count({ where }),
+    prisma.vendor.groupBy({
+      by: ["kycStatus"],
+      where: { archived: false },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const kycCounts: Record<string, number> = { All: 0 };
+  for (const g of kycGroups) {
+    kycCounts[g.kycStatus] = g._count._all;
+    kycCounts.All += g._count._all;
+  }
+
+  return {
+    ...paginatedEnvelope(rows.map(vendorToApi), total, page, limit),
+    kycCounts,
+  };
+}
+
+/** Lightweight options for filters (id + name only) */
+export async function listVendorOptions(limit = 500) {
+  const vendors = await prisma.vendor.findMany({
+    where: { archived: false },
+    orderBy: { name: "asc" },
+    take: Math.min(1000, limit),
+    select: { id: true, name: true },
+  });
+  return vendors;
 }
 
 export async function createVendor(body: {
@@ -45,6 +141,12 @@ export async function createVendor(body: {
       hubIds: Array.isArray(hubs) ? hubs : [],
       kycStatus: "pending_submission",
     },
+  });
+
+  void notifyVendorRegistered({
+    name: vendor.name,
+    email: vendor.email,
+    token: vendor.token,
   });
 
   return vendorToApi(vendor);
@@ -106,7 +208,13 @@ export async function bulkCreateVendors(vendorsList: unknown[]) {
           kycStatus: "pending_submission",
         },
       });
-      added.push(vendorToApi(vendor));
+      const apiVendor = vendorToApi(vendor);
+      added.push(apiVendor);
+      void notifyVendorRegistered({
+        name: vendor.name,
+        email: vendor.email,
+        token: vendor.token,
+      });
     }
   }
 

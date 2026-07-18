@@ -97,6 +97,16 @@ model CompanyProfile {
   updatedAt           DateTime @updatedAt
 }
 
+/// Singleton email notification preferences — id is always "default".
+model NotificationSettings {
+  id                                String   @id @default("default")
+  notifyCompanyOnInvoiceUpload      Boolean  @default(true)
+  notifyVendorOnRegistration        Boolean  @default(true)
+  notifyVendorOnKycVerified         Boolean  @default(true)
+  notifyVendorOnInvoiceStatusChange Boolean  @default(true)
+  updatedAt                         DateTime @updatedAt
+}
+
 model Category {
   id   String @id @default(cuid())
   name String @unique

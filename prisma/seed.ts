@@ -245,6 +245,7 @@ async function main() {
   await prisma.hub.deleteMany();
   await prisma.category.deleteMany();
   await prisma.companyProfile.deleteMany();
+  await prisma.notificationSettings.deleteMany();
 
   await prisma.companyProfile.create({
     data: {
@@ -258,6 +259,16 @@ async function main() {
       registeredState: "Gujarat",
       registeredStateCode: "24",
       registeredGstin: "24AABCC0000A1Z5",
+    },
+  });
+
+  await prisma.notificationSettings.create({
+    data: {
+      id: "default",
+      notifyCompanyOnInvoiceUpload: true,
+      notifyVendorOnRegistration: true,
+      notifyVendorOnKycVerified: true,
+      notifyVendorOnInvoiceStatusChange: true,
     },
   });
 

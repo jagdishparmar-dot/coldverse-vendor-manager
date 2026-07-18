@@ -52,7 +52,7 @@ Create the bucket in RustFS before uploading invoices (via console on port 9001 
 cp .env.example .env
 ```
 
-2. Configure `DATABASE_URL`, S3 variables, and auth variables in `.env`:
+2. Configure `DATABASE_URL`, S3 variables, auth variables, and (optionally) Resend in `.env`:
 
 ```env
 BETTER_AUTH_SECRET=""          # openssl rand -base64 32
@@ -60,6 +60,8 @@ BETTER_AUTH_URL="http://localhost:3000"
 SEED_ADMIN_EMAIL="admin@shreemaruti.com"
 SEED_ADMIN_PASSWORD="ChangeMe123!"
 SEED_ADMIN_NAME="Shree Maruti Admin"
+RESEND_API_KEY=""              # optional locally — emails are skipped if empty
+RESEND_FROM_EMAIL="Shree Maruti Billing <billing@yourdomain.com>"
 ```
 
 3. Apply database schema:
@@ -87,8 +89,10 @@ npm run dev
 The admin console requires email/password login via [better-auth](https://www.better-auth.com). The vendor portal (`/portal/<vendorToken>`) is public with OTP verification.
 
 - **Login:** `/login`
-- **Profile & password:** `/profile`
-- **User management (admin role only):** `/users`
+- **Account & Settings:** `/settings` — Profile, Users, and Workspace (company + email prefs) in one console tab (User menu → Profile / Users / Workspace)
+- Legacy `/profile` and `/users` redirect into the Settings hub
+
+Transactional emails (invoice upload, vendor registration, KYC verified, invoice status change) are sent via [Resend](https://resend.com) when `RESEND_API_KEY` is set and the matching toggle is enabled on Settings → Workspace.
 
 After running `npm run db:seed`, sign in with the credentials from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in your `.env` (default dev: `admin@shreemaruti.com` / `ChangeMe123!`). Change the password after first login.
 

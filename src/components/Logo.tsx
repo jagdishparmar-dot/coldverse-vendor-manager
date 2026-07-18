@@ -22,7 +22,7 @@ export function SmileLogo({ className = "", showText = true }: SmileLogoProps) {
           className="h-10 md:h-12 w-auto object-contain"
         />
         <div className="min-w-0 leading-tight hidden sm:block">
-          <p className="text-sm md:text-base font-extrabold text-slate-900 tracking-tight truncate">
+          <p className="text-sm md:text-base font-display font-bold text-slate-900 tracking-tight truncate">
             {COMPANY_SHORT_NAME}
           </p>
           <p className="text-[10px] md:text-[11px] font-medium text-slate-500 truncate">
@@ -38,7 +38,7 @@ export function SmileLogo({ className = "", showText = true }: SmileLogoProps) {
       <img
         src={COMPANY_LOGO_PATH}
         alt={COMPANY_SHORT_NAME}
-        className="h-10 w-auto md:h-12 object-contain"
+        className="h-9 w-auto object-contain"
       />
     </div>
   );

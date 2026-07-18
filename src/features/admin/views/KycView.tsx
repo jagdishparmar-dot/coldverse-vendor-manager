@@ -1,13 +1,12 @@
 "use client";
 
 import AdminKycTab from "@/src/components/AdminKycTab";
-import type { Vendor } from "@/src/types";
 
 type KycViewProps = {
-  vendors: Vendor[];
+  refreshKey: number | string;
   onRefresh: () => void;
 };
 
-export default function KycView({ vendors, onRefresh }: KycViewProps) {
-  return <AdminKycTab vendors={vendors} onRefresh={onRefresh} />;
+export default function KycView({ refreshKey, onRefresh }: KycViewProps) {
+  return <AdminKycTab refreshKey={refreshKey} onRefresh={onRefresh} />;
 }

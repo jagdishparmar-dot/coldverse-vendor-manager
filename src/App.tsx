@@ -5,41 +5,26 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Users,
-  Plus,
-  Share2,
-  Copy,
-  Trash2,
-  Download,
   Printer,
-  Upload,
-  Calendar,
   AlertCircle,
   FileText,
   Search,
-  CheckCircle2,
-  ChevronRight,
-  TrendingUp,
-  Inbox,
-  Filter,
   Building2,
-  Send,
-  HelpCircle,
   X,
   SlidersHorizontal,
-  Mail,
   Archive,
-  RefreshCw,
-  Pencil,
+  Settings,
   ShieldCheck,
-  LayoutGrid,
-  List,
+  LayoutDashboard,
+  MapPin,
+  MessageSquareText,
+  type LucideIcon,
 } from "lucide-react";
 import type { Vendor, Invoice, Hub } from "./types";
 import BulkUpload from "./components/BulkUpload";
 import VendorForm from "./components/VendorForm";
 import { SmileLogo } from "./components/Logo";
 import { portalShareUrl } from "@/src/constants/portalRoutes";
-import { exportInvoicesToExcel } from "./utils/excelExport";
 import { ColdverseSelect } from "@/src/components/coldverse-select";
 import { ColdverseDateField } from "@/src/components/coldverse-date-field";
 import { UserMenu } from "@/src/components/UserMenu";
@@ -60,11 +45,8 @@ import {
   RemarksView,
   VendorsView,
   InvoicesView,
+  SettingsView,
 } from "@/src/features/admin/views";
-import {
-  formatCurrency,
-  getCategoryBadgeClass,
-} from "@/src/features/admin/utils";
 
 const MONTH_FILTER_OPTIONS = [
   { value: "All", label: "All Months" },
@@ -84,12 +66,23 @@ const MONTH_FILTER_OPTIONS = [
 
 const ALL_CATEGORIES = ["Rent", "Manpower", "Vehicle rent", "Repairs & maintenance", "Electricity", "Others"];
 
+const ADMIN_TAB_ICONS: Record<AdminTab, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  vendors: Users,
+  invoices: FileText,
+  hubs: MapPin,
+  remarks: MessageSquareText,
+  kyc: ShieldCheck,
+  archive: Archive,
+  settings: Settings,
+};
+
 export default function App() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const router = useRouter();
 
-  // Routing State based on URL Search Query Token â€” seed from URL so portal never flashes admin UI
+  // Routing State based on URL Search Query Token — seed from URL so portal never flashes admin UI
   const [allCategories, setAllCategories] = useState<string[]>(ALL_CATEGORIES);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -104,14 +97,14 @@ export default function App() {
   const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [statusSaveError, setStatusSaveError] = useState("");
   
-  // Admin Data States
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  // Admin bootstrap data (lists self-fetch inside views)
   const [statsData, setStatsData] = useState<any | null>(null);
-  const [archivedVendors, setArchivedVendors] = useState<Vendor[]>([]);
-  const [archivedInvoices, setArchivedInvoices] = useState<Invoice[]>([]);
   const [hubs, setHubs] = useState<Hub[]>([]);
-  
+  const [vendorOptions, setVendorOptions] = useState<{ id: string; name: string }[]>([]);
+  const [kycPendingCount, setKycPendingCount] = useState(0);
+  const [listRefreshKey, setListRefreshKey] = useState(0);
+  const bumpListRefresh = () => setListRefreshKey((k) => k + 1);
+
   // UI states — optimistic tab avoids waiting on route transition / remount flashes
   const routeTab = useMemo(
     () => tabFromPathname(pathname) || "dashboard",
@@ -136,10 +129,8 @@ export default function App() {
   const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(true);
   const [autoRefreshCountdown, setAutoRefreshCountdown] = useState(120);
   
-  // Filter / Search states
-  const [vendorSearch, setVendorSearch] = useState("");
+  // Filter / Search states (global panel + InvoicesView)
   const [invoiceSearch, setInvoiceSearch] = useState("");
-  const [archiveSearch, setArchiveSearch] = useState("");
   const [invoiceCategoryFilter, setInvoiceCategoryFilter] = useState("All");
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("All");
   const [selectedVendorId, setSelectedVendorId] = useState("All");
@@ -277,6 +268,12 @@ export default function App() {
     fetchAdminData("initial");
   }, []);
 
+  // Refetch bootstrap (esp. stats) when header hub filter changes
+  useEffect(() => {
+    if (!hasLoadedOnceRef.current) return;
+    fetchAdminData("silent");
+  }, [headerHubFilter]);
+
   // Clear optimistic tab once the URL has caught up; mark tab as visited (keep-alive)
   useEffect(() => {
     setVisitedTabs((prev) => {
@@ -316,7 +313,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isAutoRefreshEnabled]);
 
-  // Fetch All Admin Data
+  // Lightweight bootstrap — lists paginate themselves inside views
   const fetchAdminData = async (mode: "initial" | "refresh" | "silent" = "refresh") => {
     const isFirstLoad = !hasLoadedOnceRef.current;
     if (isFirstLoad) {
@@ -327,31 +324,48 @@ export default function App() {
     }
     setAutoRefreshCountdown(120);
     try {
-      const [vRes, iRes, sRes, cRes, aRes, hRes] = await Promise.all([
-        fetch("/api/vendors"),
-        fetch("/api/invoices"),
-        fetch("/api/stats"),
+      const statsUrl =
+        headerHubFilter !== "All"
+          ? `/api/stats?hubId=${encodeURIComponent(headerHubFilter)}`
+          : "/api/stats";
+
+      const [sRes, cRes, hRes, voRes, kycRes] = await Promise.all([
+        fetch(statsUrl),
         fetch("/api/categories"),
-        fetch("/api/archive"),
-        fetch("/api/hubs")
+        fetch("/api/hubs?options=1"),
+        fetch("/api/vendors?options=1"),
+        fetch("/api/vendors?kycStatus=pending_verification&page=1&limit=1"),
       ]);
 
-      if (vRes.ok && iRes.ok && sRes.ok && cRes.ok && aRes.ok && hRes.ok) {
-        const vData = await vRes.json();
-        const iData = await iRes.json();
-        const sData = await sRes.json();
-        const cData = await cRes.json();
-        const aData = await aRes.json();
-        const hData = await hRes.json();
-        setVendors(vData);
-        setInvoices(iData);
-        setStatsData(sData);
-        setAllCategories(cData);
-        setArchivedVendors(aData.archivedVendors || []);
-        setArchivedInvoices(aData.archivedInvoices || []);
-        setHubs(hData);
-        hasLoadedOnceRef.current = true;
+      if (sRes.ok) {
+        setStatsData(await sRes.json());
       }
+      if (cRes.ok) {
+        setAllCategories(await cRes.json());
+      }
+      if (hRes.ok) {
+        const hData = await hRes.json();
+        setHubs(
+          (Array.isArray(hData) ? hData : []).map(
+            (h: { id: string; name: string; code: string; state: string }) => ({
+              id: h.id,
+              name: h.name,
+              code: h.code,
+              state: h.state,
+              createdAt: "",
+            })
+          )
+        );
+      }
+      if (voRes.ok) {
+        const voData = await voRes.json();
+        setVendorOptions(Array.isArray(voData) ? voData : []);
+      }
+      if (kycRes.ok) {
+        const kycData = await kycRes.json();
+        setKycPendingCount(typeof kycData.total === "number" ? kycData.total : 0);
+      }
+      hasLoadedOnceRef.current = true;
     } catch (err) {
       console.error("Error fetching admin dashboard data:", err);
     } finally {
@@ -386,7 +400,8 @@ export default function App() {
         method: "POST"
       });
       if (response.ok) {
-        fetchAdminData();
+        bumpListRefresh();
+        fetchAdminData("silent");
       } else {
         const errData = await response.json();
         alert(errData.error || "Failed to restore item.");
@@ -426,7 +441,8 @@ export default function App() {
       if (response.ok) {
         setDeleteTarget(null);
         setDeleteRemarks("");
-        fetchAdminData();
+        bumpListRefresh();
+        fetchAdminData("silent");
       } else {
         const errData = await response.json();
         setDeleteError(errData.error || "Failed to complete archiving.");
@@ -463,8 +479,8 @@ export default function App() {
       setAllCategories(resData.categories);
       setCategoryModalSuccess(`Category "${newCategoryName}" added successfully!`);
       setNewCategoryName("");
-      // Refresh admin stats to update lists if needed
-      fetchAdminData();
+      bumpListRefresh();
+      fetchAdminData("silent");
     } catch (err: any) {
       setCategoryModalError(err.message || "Something went wrong.");
     } finally {
@@ -492,8 +508,9 @@ export default function App() {
         throw new Error(errData.error || "Failed to update status.");
       }
       
-      // Update local invoices state or refresh admin data
-      fetchAdminData();
+      // Refresh bootstrap + paginated lists
+      bumpListRefresh();
+      fetchAdminData("silent");
       setStatusEditInvoice(null);
     } catch (err: any) {
       setStatusSaveError(err.message || "Failed to save status.");
@@ -503,23 +520,6 @@ export default function App() {
   };
 
   // Category / currency helpers live in @/src/features/admin/utils
-
-  const matchesHeaderHubInvoice = (inv: Invoice) =>
-    headerHubFilter === "All" || inv.hubId === headerHubFilter;
-
-  const matchesHeaderHubVendor = (v: Vendor) => {
-    if (headerHubFilter === "All") return true;
-    if (v.hubs?.includes(headerHubFilter)) return true;
-    return invoices.some(
-      (inv) =>
-        !inv.archived &&
-        inv.vendorId === v.id &&
-        inv.hubId === headerHubFilter
-    );
-  };
-
-  const hubFilteredVendors = vendors.filter(matchesHeaderHubVendor);
-  const hubScopedInvoices = invoices.filter(matchesHeaderHubInvoice);
 
   const headerHubOptions = [
     { value: "All", label: "All Hubs" },
@@ -534,202 +534,19 @@ export default function App() {
       ? "All Hubs"
       : hubs.find((hub) => hub.id === headerHubFilter)?.name ?? "All Hubs";
 
-  // Filter vendor list
-  const filteredVendors = hubFilteredVendors.filter((v) => {
-    const query = vendorSearch.toLowerCase();
-    return (
-      v.name.toLowerCase().includes(query) ||
-      v.email.toLowerCase().includes(query) ||
-      (v.phone && v.phone.includes(query))
-    );
-  });
-
-  // Filter invoice logs (except status, to keep status counts updated on status cards)
-  const invoicesFilteredExceptStatus = invoices.filter((inv) => {
-    const query = invoiceSearch.toLowerCase();
-    const matchesSearch =
-      inv.vendorName.toLowerCase().includes(query) ||
-      inv.invoiceNumber.toLowerCase().includes(query) ||
-      inv.fileName.toLowerCase().includes(query);
-
-    const matchesCategory =
-      invoiceCategoryFilter === "All" || inv.category === invoiceCategoryFilter;
-
-    const matchesVendor =
-      selectedVendorId === "All" || inv.vendorId === selectedVendorId;
-
-    let matchesMonth = true;
-    if (selectedMonth !== "All" && inv.date) {
-      const parts = inv.date.split("-");
-      if (parts.length >= 2) {
-        matchesMonth = parts[1] === selectedMonth;
-      } else {
-        matchesMonth = false;
-      }
-    }
-
-    let matchesDate = true;
-    if (selectedDate && inv.date) {
-      matchesDate = inv.date === selectedDate;
-    }
-
-    const matchesHub = matchesHeaderHubInvoice(inv);
-
-    return matchesSearch && matchesCategory && matchesVendor && matchesMonth && matchesDate && matchesHub;
-  });
-
-  // Apply status filter for final list
-  const filteredInvoices = invoicesFilteredExceptStatus.filter((inv) => {
-    if (invoiceStatusFilter === "All") return true;
-    if (invoiceStatusFilter === "Pending") {
-      return inv.status === "Pending" || !inv.status;
-    }
-    return inv.status === invoiceStatusFilter;
-  });
-
-  // Dynamic stats calculation
-  const getDynamicStats = () => {
-    if (!statsData) return null;
-    
-    // We compute dynamic statistics based on our current filteredInvoices
-    const totalVendorsCount = hubFilteredVendors.length;
-    const totalInvoicesCount = filteredInvoices.length;
-    const totalAmountSum = filteredInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-
-    // Categories Breakdown
-    const categoriesMap: Record<string, { count: number; total: number }> = {};
-    allCategories.forEach(c => {
-      categoriesMap[c] = { count: 0, total: 0 };
-    });
-    filteredInvoices.forEach(inv => {
-      if (!categoriesMap[inv.category]) {
-        categoriesMap[inv.category] = { count: 0, total: 0 };
-      }
-      categoriesMap[inv.category].count += 1;
-      categoriesMap[inv.category].total += inv.amount;
-    });
-
-    const categoriesArray = Object.entries(categoriesMap).map(([name, stats]) => ({
-      name,
-      count: stats.count,
-      total: stats.total
-    }));
-
-    // Vendors Breakdown
-    const vendorStatsMap: Record<string, { name: string; count: number; total: number }> = {};
-    hubFilteredVendors.forEach(v => {
-      vendorStatsMap[v.id] = { name: v.name, count: 0, total: 0 };
-    });
-    filteredInvoices.forEach(inv => {
-      if (vendorStatsMap[inv.vendorId]) {
-        vendorStatsMap[inv.vendorId].count += 1;
-        vendorStatsMap[inv.vendorId].total += inv.amount;
-      } else {
-        vendorStatsMap[inv.vendorId] = { name: inv.vendorName, count: 1, total: inv.amount };
-      }
-    });
-
-    const vendorsArray = Object.entries(vendorStatsMap).map(([id, stats]) => ({
-      vendorId: id,
-      vendorName: stats.name,
-      invoiceCount: stats.count,
-      totalAmount: stats.total
-    }));
-
-    return {
-      totalVendors: totalVendorsCount,
-      totalInvoices: totalInvoicesCount,
-      totalAmount: totalAmountSum,
-      categories: categoriesArray,
-      vendors: vendorsArray
-    };
-  };
-
-  const dynamicStats = getDynamicStats();
-
-  // Status KPIs (calculated on invoicesFilteredExceptStatus so selecting one status doesn't reset other cards to 0)
-  const paidInvoices = invoicesFilteredExceptStatus.filter(inv => inv.status === 'Paid');
-  const holdInvoices = invoicesFilteredExceptStatus.filter(inv => inv.status === 'Hold');
-  const rejectedInvoices = invoicesFilteredExceptStatus.filter(inv => inv.status === 'Rejected');
-  const pendingInvoices = invoicesFilteredExceptStatus.filter(inv => inv.status === 'Pending' || !inv.status);
-
+  // Dashboard uses API-shaped stats (hub-scoped via fetchAdminData)
+  const dynamicStats = statsData;
   const statusKPIs = {
-    paidCount: paidInvoices.length,
-    paidSum: paidInvoices.reduce((sum, i) => sum + i.amount, 0),
-    holdCount: holdInvoices.length,
-    holdSum: holdInvoices.reduce((sum, i) => sum + i.amount, 0),
-    rejectedCount: rejectedInvoices.length,
-    rejectedSum: rejectedInvoices.reduce((sum, i) => sum + i.amount, 0),
-    pendingCount: pendingInvoices.length,
-    pendingSum: pendingInvoices.reduce((sum, i) => sum + i.amount, 0),
+    paidCount: statsData?.statusCounts?.Paid?.count ?? 0,
+    paidSum: statsData?.statusCounts?.Paid?.total ?? 0,
+    holdCount: statsData?.statusCounts?.Hold?.count ?? 0,
+    holdSum: statsData?.statusCounts?.Hold?.total ?? 0,
+    rejectedCount: statsData?.statusCounts?.Rejected?.count ?? 0,
+    rejectedSum: statsData?.statusCounts?.Rejected?.total ?? 0,
+    pendingCount: statsData?.statusCounts?.Pending?.count ?? 0,
+    pendingSum: statsData?.statusCounts?.Pending?.total ?? 0,
   };
-
-  // Monthly Trend Data
-  const monthsNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const getMonthlyTrendData = () => {
-    const trendInvoices = invoices.filter(inv => {
-      const matchesCategory = invoiceCategoryFilter === "All" || inv.category === invoiceCategoryFilter;
-      const matchesVendor = selectedVendorId === "All" || inv.vendorId === selectedVendorId;
-      const matchesHub = matchesHeaderHubInvoice(inv);
-      return matchesCategory && matchesVendor && matchesHub;
-    });
-
-    const monthsMap: Record<string, { monthKey: string; label: string; count: number; total: number; sortKey: string }> = {};
-
-    // Seed 2026 months
-    const year2026Months = [
-      { key: "01", label: "Jan" },
-      { key: "02", label: "Feb" },
-      { key: "03", label: "Mar" },
-      { key: "04", label: "Apr" },
-      { key: "05", label: "May" },
-      { key: "06", label: "Jun" },
-      { key: "07", label: "Jul" },
-      { key: "08", label: "Aug" },
-      { key: "09", label: "Sep" },
-      { key: "10", label: "Oct" },
-      { key: "11", label: "Nov" },
-      { key: "12", label: "Dec" },
-    ];
-
-    year2026Months.forEach(m => {
-      const monthLabel = `${m.label} 2026`;
-      monthsMap[monthLabel] = {
-        monthKey: m.key,
-        label: monthLabel,
-        count: 0,
-        total: 0,
-        sortKey: `2026-${m.key}`
-      };
-    });
-
-    trendInvoices.forEach(inv => {
-      if (!inv.date) return;
-      const parts = inv.date.split("-");
-      if (parts.length >= 2) {
-        const year = parts[0];
-        const monthIdx = parseInt(parts[1], 10) - 1;
-        if (monthIdx >= 0 && monthIdx < 12) {
-          const label = `${monthsNames[monthIdx]} ${year}`;
-          if (!monthsMap[label]) {
-            monthsMap[label] = {
-              monthKey: parts[1],
-              label,
-              count: 0,
-              total: 0,
-              sortKey: `${year}-${parts[1]}`
-            };
-          }
-          monthsMap[label].count += 1;
-          monthsMap[label].total += inv.amount;
-        }
-      }
-    });
-
-    return Object.values(monthsMap).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
-  };
-
-  const monthlyTrendData = getMonthlyTrendData();
+  const monthlyTrendData = statsData?.monthlyTrend ?? [];
 
   // ================= ADMIN CONSOLE RENDERING =================
   return (
@@ -737,40 +554,39 @@ export default function App() {
       <div id="admin-root" className="min-h-screen bg-gray-50/50 flex flex-col screen-only">
       {/* Top Navigation Bar */}
       <nav className="bg-white border-b border-gray-100 sticky top-0 z-10 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex h-16 justify-between items-center">
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto flex h-14 sm:h-16 justify-between items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <SmileLogo showText={false} />
-            <div className="h-8 w-[1.5px] bg-slate-200 hidden md:block"></div>
-            <div className="hidden md:block leading-none">
-              <h1 className="text-xs font-black text-slate-800 uppercase tracking-wider font-sans">
+            <div className="h-7 w-px bg-gray-200 hidden md:block shrink-0" aria-hidden />
+            <div className="hidden md:block leading-tight min-w-0">
+              <h1 className="text-[13px] font-display font-bold text-slate-800 tracking-tight truncate">
                 Shree Maruti Integrated Logistics Limited
               </h1>
-              <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">
+              <p className="text-[10px] font-medium text-slate-400 tracking-wide mt-0.5 truncate">
                 Vendor Billing & Invoices Console
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Hub filter */}
-            <div className="flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-slate-400 hidden sm:block shrink-0" />
-              <ColdverseSelect
-                value={headerHubFilter}
-                onValueChange={setHeaderHubFilter}
-                options={headerHubOptions}
-                selectedLabel={headerHubSelectedLabel}
-                placeholder="All Hubs"
-                variant="inline"
-                className="min-w-[130px] sm:min-w-[180px]"
-              />
-            </div>
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            <ColdverseSelect
+              value={headerHubFilter}
+              onValueChange={setHeaderHubFilter}
+              options={headerHubOptions}
+              selectedLabel={headerHubSelectedLabel}
+              placeholder="All Hubs"
+              variant="inline"
+              className="min-w-[120px] sm:min-w-[168px]"
+            />
 
             <AdminRefreshControl
               isAutoRefreshEnabled={isAutoRefreshEnabled}
               autoRefreshCountdown={autoRefreshCountdown}
               adminLoading={adminLoading}
-              onRefresh={fetchAdminData}
+              onRefresh={() => {
+                bumpListRefresh();
+                fetchAdminData();
+              }}
               onToggleAutoRefresh={() => {
                 setIsAutoRefreshEnabled(!isAutoRefreshEnabled);
                 if (!isAutoRefreshEnabled) {
@@ -780,13 +596,14 @@ export default function App() {
             />
 
             {session?.user && (
-              <div className="pl-2 border-l border-gray-200">
+              <>
+                <div className="h-7 w-px bg-gray-200 hidden sm:block shrink-0" aria-hidden />
                 <UserMenu
                   name={session.user.name}
                   email={session.user.email}
                   role={session.user.role}
                 />
-              </div>
+              </>
             )}
           </div>
         </div>
@@ -795,63 +612,121 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         
-        {/* Navigation Tabs and Quick Actions */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200/80 pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0">
-          <div className="flex bg-gray-100 p-1 rounded-xl overflow-x-auto whitespace-nowrap flex-nowrap max-w-full gap-1 no-scrollbar scrollbar-none">
-            {ADMIN_NAV.filter((item) => item.primary).map((item) => (
-              <Link
-                key={item.tab}
-                href={item.href}
-                scroll={false}
-                prefetch
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigateToTab(item.tab);
-                }}
-                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-colors shrink-0 relative ${
-                  activeTab === item.tab
-                    ? "bg-orange-600 text-white shadow-sm"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
-                }`}
+        {/* Navigation Tabs */}
+        <div className="flex flex-col gap-3">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="flex items-stretch min-w-0">
+              <nav
+                aria-label="Console sections"
+                className="flex flex-1 items-stretch overflow-x-auto whitespace-nowrap no-scrollbar scrollbar-none px-1.5 sm:px-2"
               >
-                {item.label}
-                {item.tab === "kyc" &&
-                  vendors.filter((v) => v.kycStatus === "pending_verification").length > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">
-                      {vendors.filter((v) => v.kycStatus === "pending_verification").length}
-                    </span>
-                  )}
-              </Link>
-            ))}
-            <Link
-              href="/archive"
-              scroll={false}
-              prefetch
-              onClick={(e) => {
-                e.preventDefault();
-                navigateToTab("archive");
-              }}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold tracking-wide transition-colors shrink-0 ${
-                activeTab === "archive"
-                  ? "bg-orange-600 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
-              }`}
-              title="System Archive"
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <Archive className="w-3.5 h-3.5" />
-                Archive
-              </span>
-            </Link>
+                {ADMIN_NAV.filter((item) => item.primary).map((item) => {
+                  const Icon = ADMIN_TAB_ICONS[item.tab];
+                  const isActive = activeTab === item.tab;
+                  const pendingKyc = item.tab === "kyc" ? kycPendingCount : 0;
+
+                  return (
+                    <Link
+                      key={item.tab}
+                      href={item.href}
+                      scroll={false}
+                      prefetch
+                      title={item.label}
+                      aria-current={isActive ? "page" : undefined}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigateToTab(item.tab);
+                      }}
+                      className={`group relative inline-flex items-center gap-2 px-3 sm:px-3.5 py-3.5 text-[13px] font-display font-semibold tracking-tight shrink-0 transition-colors ${
+                        isActive
+                          ? "text-orange-600"
+                          : "text-gray-500 hover:text-gray-900"
+                      }`}
+                    >
+                      <Icon
+                        className={`w-3.5 h-3.5 shrink-0 transition-opacity ${
+                          isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100"
+                        }`}
+                      />
+                      <span>{item.shortLabel}</span>
+                      {pendingKyc > 0 && (
+                        <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">
+                          {pendingKyc}
+                        </span>
+                      )}
+                      <span
+                        className={`pointer-events-none absolute inset-x-2 bottom-0 h-0.5 rounded-full transition-all ${
+                          isActive
+                            ? "bg-orange-600 opacity-100"
+                            : "bg-transparent opacity-0 group-hover:bg-gray-200 group-hover:opacity-100"
+                        }`}
+                      />
+                    </Link>
+                  );
+                })}
+
+                <div
+                  className="mx-1.5 my-3 w-px shrink-0 bg-gray-200"
+                  aria-hidden
+                />
+
+                {ADMIN_NAV.filter((item) => !item.primary).map((item) => {
+                  const Icon = ADMIN_TAB_ICONS[item.tab];
+                  const isActive = activeTab === item.tab;
+
+                  return (
+                    <Link
+                      key={item.tab}
+                      href={item.href}
+                      scroll={false}
+                      prefetch
+                      title={item.label}
+                      aria-current={isActive ? "page" : undefined}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigateToTab(item.tab);
+                      }}
+                      className={`group relative inline-flex items-center gap-2 px-3 sm:px-3.5 py-3.5 text-[13px] font-display font-semibold tracking-tight shrink-0 transition-colors ${
+                        isActive
+                          ? "text-orange-600"
+                          : "text-gray-500 hover:text-gray-900"
+                      }`}
+                    >
+                      <Icon
+                        className={`w-3.5 h-3.5 shrink-0 transition-opacity ${
+                          isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100"
+                        }`}
+                      />
+                      <span className="hidden sm:inline">{item.shortLabel}</span>
+                      <span
+                        className={`pointer-events-none absolute inset-x-2 bottom-0 h-0.5 rounded-full transition-all ${
+                          isActive
+                            ? "bg-orange-600 opacity-100"
+                            : "bg-transparent opacity-0 group-hover:bg-gray-200 group-hover:opacity-100"
+                        }`}
+                      />
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              {headerHubFilter !== "All" && (
+                <div className="hidden sm:flex items-center pr-3 pl-1 border-l border-gray-100 shrink-0">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100">
+                    <Building2 className="w-3 h-3" />
+                    {hubs.find((h) => h.id === headerHubFilter)?.name || "Selected Hub"}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
+
           {headerHubFilter !== "All" && (
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100 shrink-0">
+            <span className="sm:hidden inline-flex items-center gap-1.5 text-[10px] font-bold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100 self-start">
               <Building2 className="w-3 h-3" />
               {hubs.find((h) => h.id === headerHubFilter)?.name || "Selected Hub"}
             </span>
           )}
-          </div>
         </div>
 
         {/* Modal Overlays */}
@@ -1062,10 +937,11 @@ export default function App() {
             <div className="w-full max-w-xl my-auto">
               <VendorForm
                 vendor={editingVendor || undefined}
-                onSuccess={(newV) => {
+                onSuccess={() => {
                   setShowSingleVendorModal(false);
                   setEditingVendor(null);
-                  fetchAdminData();
+                  bumpListRefresh();
+                  fetchAdminData("silent");
                 }}
                 onClose={() => {
                   setShowSingleVendorModal(false);
@@ -1080,9 +956,10 @@ export default function App() {
           <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-sm z-50 overflow-y-auto flex justify-center items-start md:items-center p-4 py-8 md:py-12">
             <div className="w-full max-w-5xl my-auto">
               <BulkUpload
-                onSuccess={(added) => {
+                onSuccess={() => {
                   setShowBulkUploadModal(false);
-                  fetchAdminData();
+                  bumpListRefresh();
+                  fetchAdminData("silent");
                 }}
                 onClose={() => setShowBulkUploadModal(false)}
               />
@@ -1091,7 +968,10 @@ export default function App() {
         )}
 
         {/* Global Filters Panel */}
-        {activeTab !== "vendors" && activeTab !== "archive" && activeTab !== "kyc" && (
+        {activeTab !== "vendors" &&
+          activeTab !== "archive" &&
+          activeTab !== "kyc" &&
+          activeTab !== "settings" && (
           <div id="global-filters-panel" className="bg-white rounded-2xl border-y border-r border-l-4 border-l-orange-500 border-gray-100 p-5 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex items-center gap-2">
@@ -1127,7 +1007,7 @@ export default function App() {
                   variant="filter"
                   options={[
                     { value: "All", label: "All Vendors" },
-                    ...vendors.map((v) => ({ value: v.id, label: v.name })),
+                    ...vendorOptions.map((v) => ({ value: v.id, label: v.name })),
                   ]}
                 />
               </div>
@@ -1226,12 +1106,9 @@ export default function App() {
         {visitedTabs.has("vendors") && (
           <div hidden={activeTab !== "vendors"} className={activeTab === "vendors" ? undefined : "hidden"}>
             <VendorsView
-              hubFilteredVendors={hubFilteredVendors}
-              filteredVendors={filteredVendors}
-              hubs={hubs}
               headerHubFilter={headerHubFilter}
-              vendorSearch={vendorSearch}
-              onVendorSearchChange={setVendorSearch}
+              hubs={hubs}
+              refreshKey={listRefreshKey}
               vendorViewMode={vendorViewMode}
               onVendorViewModeChange={setVendorViewMode}
               copiedToken={copiedToken}
@@ -1251,22 +1128,32 @@ export default function App() {
 
         {visitedTabs.has("kyc") && (
           <div hidden={activeTab !== "kyc"} className={activeTab === "kyc" ? undefined : "hidden"}>
-            <KycView vendors={vendors} onRefresh={() => fetchAdminData("silent")} />
+            <KycView
+              refreshKey={listRefreshKey}
+              onRefresh={() => {
+                bumpListRefresh();
+                fetchAdminData("silent");
+              }}
+            />
           </div>
         )}
 
         {visitedTabs.has("invoices") && (
           <div hidden={activeTab !== "invoices"} className={activeTab === "invoices" ? undefined : "hidden"}>
             <InvoicesView
-              filteredInvoices={filteredInvoices}
-              hubScopedInvoices={hubScopedInvoices}
-              vendors={vendors}
-              hubs={hubs}
-              allCategories={allCategories}
+              headerHubFilter={headerHubFilter}
               invoiceSearch={invoiceSearch}
               onInvoiceSearchChange={setInvoiceSearch}
               invoiceCategoryFilter={invoiceCategoryFilter}
               onInvoiceCategoryFilterChange={setInvoiceCategoryFilter}
+              invoiceStatusFilter={invoiceStatusFilter}
+              selectedVendorId={selectedVendorId}
+              selectedMonth={selectedMonth}
+              selectedDate={selectedDate}
+              allCategories={allCategories}
+              vendorOptions={vendorOptions}
+              hubs={hubs}
+              refreshKey={listRefreshKey}
               onEditStatus={(inv) => {
                 setStatusEditInvoice(inv);
                 setEditStatusValue(inv.status || "Pending");
@@ -1283,10 +1170,8 @@ export default function App() {
         {visitedTabs.has("remarks") && (
           <div hidden={activeTab !== "remarks"} className={activeTab === "remarks" ? undefined : "hidden"}>
             <RemarksView
-              invoices={invoices}
-              invoiceSearch={invoiceSearch}
-              onInvoiceSearchChange={setInvoiceSearch}
-              matchesHeaderHubInvoice={matchesHeaderHubInvoice}
+              headerHubFilter={headerHubFilter}
+              refreshKey={listRefreshKey}
               onEditStatus={(inv) => {
                 setStatusEditInvoice(inv);
                 setEditStatusValue(inv.status || "Pending");
@@ -1300,19 +1185,27 @@ export default function App() {
 
         {visitedTabs.has("hubs") && (
           <div hidden={activeTab !== "hubs"} className={activeTab === "hubs" ? undefined : "hidden"}>
-            <HubsView vendors={vendors} onHubsUpdated={() => fetchAdminData("silent")} />
+            <HubsView
+              onHubsUpdated={() => {
+                bumpListRefresh();
+                fetchAdminData("silent");
+              }}
+            />
           </div>
         )}
 
         {visitedTabs.has("archive") && (
           <div hidden={activeTab !== "archive"} className={activeTab === "archive" ? undefined : "hidden"}>
             <ArchiveView
-              archivedVendors={archivedVendors}
-              archivedInvoices={archivedInvoices}
-              archiveSearch={archiveSearch}
-              onArchiveSearchChange={setArchiveSearch}
+              refreshKey={listRefreshKey}
               onRestore={handleRestoreItem}
             />
+          </div>
+        )}
+
+        {visitedTabs.has("settings") && (
+          <div hidden={activeTab !== "settings"} className={activeTab === "settings" ? undefined : "hidden"}>
+            <SettingsView role={session?.user?.role} />
           </div>
         )}
       </main>

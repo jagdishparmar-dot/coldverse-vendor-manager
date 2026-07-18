@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import AdminShell from "./AdminShell";
+
+export const metadata: Metadata = {
+  title: "Console",
+  description: "Shree Maruti vendor billing administration console.",
+};
 
 /**
  * Server layout: route segment changes update `children` only.

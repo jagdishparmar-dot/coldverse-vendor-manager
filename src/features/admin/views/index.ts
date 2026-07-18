@@ -5,3 +5,4 @@ export { default as ArchiveView } from "./ArchiveView";
 export { default as RemarksView } from "./RemarksView";
 export { default as VendorsView } from "./VendorsView";
 export { default as InvoicesView } from "./InvoicesView";
+export { default as SettingsView } from "./SettingsView";

@@ -7,6 +7,12 @@ import {
   isValidGstin,
   normalizeGstin,
 } from "@/src/utils/gst";
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_SIZE,
+  paginatedEnvelope,
+} from "@/lib/pagination";
+import type { Prisma } from "@/src/generated/prisma/client";
 
 export type HubInput = {
   name?: string;
@@ -57,6 +63,54 @@ function normalizeHubGstFields(body: HubInput) {
 export async function listHubs() {
   const hubs = await prisma.hub.findMany({ orderBy: { createdAt: "desc" } });
   return hubs.map(hubToApi);
+}
+
+export type ListHubsQuery = {
+  page?: number;
+  limit?: number;
+  search?: string;
+};
+
+export async function listHubsPaginated(query: ListHubsQuery = {}) {
+  const page = query.page && query.page > 0 ? query.page : DEFAULT_PAGE;
+  const limit =
+    query.limit && query.limit > 0
+      ? Math.min(100, query.limit)
+      : DEFAULT_PAGE_SIZE;
+  const skip = (page - 1) * limit;
+
+  const where: Prisma.HubWhereInput = {};
+  const search = query.search?.trim();
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { code: { contains: search, mode: "insensitive" } },
+      { state: { contains: search, mode: "insensitive" } },
+      { city: { contains: search, mode: "insensitive" } },
+      { gstin: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  const [rows, total] = await Promise.all([
+    prisma.hub.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.hub.count({ where }),
+  ]);
+
+  return paginatedEnvelope(rows.map(hubToApi), total, page, limit);
+}
+
+/** Compact hub options for header / form selects */
+export async function listHubOptions(limit = 500) {
+  return prisma.hub.findMany({
+    orderBy: { name: "asc" },
+    take: Math.min(1000, limit),
+    select: { id: true, name: true, code: true, state: true },
+  });
 }
 
 export async function createHub(body: HubInput) {

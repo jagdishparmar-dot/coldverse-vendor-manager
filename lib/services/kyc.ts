@@ -7,6 +7,7 @@ import {
   getKycObject,
   uploadKycFile,
 } from "@/lib/storage/s3";
+import { notifyVendorKycVerified } from "@/lib/services/notifications";
 import { ServiceError } from "@/lib/services/utils";
 import type { Prisma } from "@/src/generated/prisma/client";
 
@@ -239,6 +240,13 @@ export async function verifyKyc(
       kycDetails: nextDetails as unknown as Prisma.InputJsonValue,
     },
   });
+
+  if (status === "verified") {
+    void notifyVendorKycVerified({
+      name: updated.name,
+      email: updated.email,
+    });
+  }
 
   return {
     success: true,

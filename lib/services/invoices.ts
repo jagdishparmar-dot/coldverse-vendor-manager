@@ -8,7 +8,14 @@ import {
 import { listCategories } from "@/lib/services/categories";
 import { getCompanyProfile } from "@/lib/services/company";
 import { listHubs } from "@/lib/services/hubs";
+import { notifyCompanyInvoiceUploaded, notifyVendorInvoiceStatusChanged } from "@/lib/services/notifications";
 import { ServiceError } from "@/lib/services/utils";
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_SIZE,
+  paginatedEnvelope,
+} from "@/lib/pagination";
+import type { Prisma } from "@/src/generated/prisma/client";
 
 export async function listActiveInvoices() {
   const invoices = await prisma.invoice.findMany({
@@ -16,6 +23,110 @@ export async function listActiveInvoices() {
     orderBy: { uploadedAt: "desc" },
   });
   return invoices.map(invoiceToApi);
+}
+
+export type ListInvoicesQuery = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: string;
+  status?: string;
+  vendorId?: string;
+  hubId?: string;
+  month?: string;
+  date?: string;
+  hasRemarks?: boolean;
+  archived?: boolean;
+};
+
+function buildInvoiceWhere(query: ListInvoicesQuery): Prisma.InvoiceWhereInput {
+  const where: Prisma.InvoiceWhereInput = {
+    archived: query.archived === true ? true : false,
+  };
+
+  if (query.category && query.category !== "All") {
+    where.category = query.category;
+  }
+  if (query.status && query.status !== "All") {
+    where.status = query.status;
+  }
+  if (query.vendorId && query.vendorId !== "All") {
+    where.vendorId = query.vendorId;
+  }
+  if (query.hubId && query.hubId !== "All") {
+    where.hubId = query.hubId;
+  }
+  if (query.date) {
+    where.date = query.date;
+  } else if (query.month && query.month !== "All") {
+    // date stored as YYYY-MM-DD — match month segment
+    where.date = { contains: `-${query.month}-` };
+  }
+  if (query.hasRemarks) {
+    where.AND = [
+      ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+      { remarks: { not: null } },
+      { NOT: { remarks: "" } },
+    ];
+  }
+
+  const search = query.search?.trim();
+  if (search) {
+    where.OR = [
+      { invoiceNumber: { contains: search, mode: "insensitive" } },
+      { vendorName: { contains: search, mode: "insensitive" } },
+      { fileName: { contains: search, mode: "insensitive" } },
+      { remarks: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  return where;
+}
+
+export async function listInvoicesPaginated(query: ListInvoicesQuery = {}) {
+  const page = query.page && query.page > 0 ? query.page : DEFAULT_PAGE;
+  const limit =
+    query.limit && query.limit > 0
+      ? Math.min(100, query.limit)
+      : DEFAULT_PAGE_SIZE;
+  const skip = (page - 1) * limit;
+  const where = buildInvoiceWhere(query);
+
+  // Status counts share filters except status itself
+  const whereForCounts = buildInvoiceWhere({ ...query, status: undefined });
+
+  const [rows, total, statusGroups] = await Promise.all([
+    prisma.invoice.findMany({
+      where,
+      orderBy: { uploadedAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.invoice.count({ where }),
+    prisma.invoice.groupBy({
+      by: ["status"],
+      where: whereForCounts,
+      _count: { _all: true },
+    }),
+  ]);
+
+  const statusCounts: Record<string, number> = {
+    All: 0,
+    Pending: 0,
+    Paid: 0,
+    Hold: 0,
+    Rejected: 0,
+  };
+  for (const g of statusGroups) {
+    const key = g.status || "Pending";
+    statusCounts[key] = (statusCounts[key] || 0) + g._count._all;
+    statusCounts.All += g._count._all;
+  }
+
+  return {
+    ...paginatedEnvelope(rows.map(invoiceToApi), total, page, limit),
+    statusCounts,
+  };
 }
 
 export async function uploadInvoice(body: {
@@ -114,6 +225,14 @@ export async function uploadInvoice(body: {
       hardCopySubmittedTo: hardCopySubmittedTo || "",
       hardCopySubmissionDate: hardCopySubmissionDate || "",
     },
+  });
+
+  void notifyCompanyInvoiceUploaded({
+    vendorName: vendor.name,
+    invoiceNumber: invoice.invoiceNumber,
+    amount: Number(invoice.amount),
+    category: invoice.category,
+    invoiceDate: invoice.date,
   });
 
   return {
@@ -218,6 +337,20 @@ export async function updateInvoiceStatus(
       remarks: remarks || "",
     },
   });
+
+  const vendor = await prisma.vendor.findUnique({
+    where: { id: updated.vendorId },
+  });
+  if (vendor) {
+    void notifyVendorInvoiceStatusChanged({
+      vendorName: vendor.name,
+      vendorEmail: vendor.email,
+      invoiceNumber: updated.invoiceNumber,
+      status: updated.status,
+      remarks: updated.remarks || undefined,
+      amount: Number(updated.amount),
+    });
+  }
 
   return {
     message: `Invoice status updated to ${status}.`,

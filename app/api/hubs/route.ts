@@ -1,11 +1,25 @@
 import { NextResponse } from "next/server";
 import { handleServiceError } from "@/lib/api-utils";
-import { createHub, listHubs } from "@/lib/services/hubs";
+import { parsePageLimit } from "@/lib/pagination";
+import { createHub, listHubOptions, listHubsPaginated } from "@/lib/services/hubs";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const hubs = await listHubs();
-    return NextResponse.json(hubs);
+    const { searchParams } = new URL(request.url);
+
+    if (searchParams.get("options") === "1") {
+      const limit = Number(searchParams.get("limit") || 500);
+      const options = await listHubOptions(limit);
+      return NextResponse.json(options);
+    }
+
+    const { page, limit } = parsePageLimit(searchParams);
+    const result = await listHubsPaginated({
+      page,
+      limit,
+      search: searchParams.get("search") || undefined,
+    });
+    return NextResponse.json(result);
   } catch (error) {
     return handleServiceError(error);
   }

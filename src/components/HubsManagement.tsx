@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -11,15 +11,21 @@ import {
   CheckCircle2,
   Search,
   Pencil,
+  Loader2,
 } from "lucide-react";
 import { Hub, Vendor } from "../types";
 import { INDIAN_STATES } from "../constants";
 import { ColdverseSelect } from "@/src/components/coldverse-select";
-import CompanyBillingProfile from "@/src/components/CompanyBillingProfile";
+import { ListPagination } from "@/src/components/ListPagination";
+import {
+  usePaginatedList,
+  useResetPageOnFilterChange,
+} from "@/src/hooks/usePaginatedList";
 import { getStateCodeFromName, isValidGstin } from "@/src/utils/gst";
 
 interface HubsManagementProps {
-  vendors: Vendor[];
+  /** Optional — used only for per-hub vendor count column; may be empty. */
+  vendors?: Vendor[];
   onHubsUpdated: () => void;
 }
 
@@ -34,9 +40,10 @@ const emptyHubForm = {
   billingAddress: "",
 };
 
-export default function HubsManagement({ vendors, onHubsUpdated }: HubsManagementProps) {
-  const [hubs, setHubs] = useState<Hub[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+export default function HubsManagement({
+  vendors = [],
+  onHubsUpdated,
+}: HubsManagementProps) {
   const [activeSubTab, setActiveSubTab] = useState<"list" | "single" | "bulk">("list");
   const [editingHubId, setEditingHubId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyHubForm });
@@ -46,23 +53,40 @@ export default function HubsManagement({ vendors, onHubsUpdated }: HubsManagemen
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const fetchHubs = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/hubs");
-      if (res.ok) {
-        setHubs(await res.json());
-      }
-    } catch (err) {
-      console.error("Failed to fetch hubs", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const filterKey = searchQuery;
 
-  useEffect(() => {
-    void fetchHubs();
-  }, []);
+  const buildUrl = useCallback(
+    (page: number, limit: number) => {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("limit", String(limit));
+      const q = searchQuery.trim();
+      if (q) params.set("search", q);
+      return `/api/hubs?${params.toString()}`;
+    },
+    [searchQuery]
+  );
+
+  const {
+    items: hubs,
+    total,
+    page,
+    limit,
+    loading: isLoading,
+    error: listError,
+    setPage,
+    setLimit,
+    reload,
+  } = usePaginatedList<Hub>({
+    buildUrl,
+    refreshKey: filterKey,
+  });
+
+  useResetPageOnFilterChange(filterKey, setPage);
+
+  const reloadList = () => {
+    reload();
+  };
 
   const clearNotifications = () => {
     setErrorMsg("");
@@ -136,7 +160,7 @@ export default function HubsManagement({ vendors, onHubsUpdated }: HubsManagemen
       );
       setForm({ ...emptyHubForm });
       setEditingHubId(null);
-      void fetchHubs();
+      reloadList();
       onHubsUpdated();
       setActiveSubTab("list");
     } catch (err: unknown) {
@@ -162,7 +186,6 @@ export default function HubsManagement({ vendors, onHubsUpdated }: HubsManagemen
 
     lines.forEach((line, index) => {
       const parts = line.split(/[,\t]/).map((p) => p.trim());
-      // Name, Code, State [, Address, City, Pincode, GSTIN]
       if (parts.length < 3) {
         errors.push(`Line ${index + 1}: Expected at least Name, Code, State.`);
         return;
@@ -199,7 +222,7 @@ export default function HubsManagement({ vendors, onHubsUpdated }: HubsManagemen
         setBulkText("");
         setActiveSubTab("list");
       }
-      void fetchHubs();
+      reloadList();
       onHubsUpdated();
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Bulk upload failed.");
@@ -216,29 +239,18 @@ export default function HubsManagement({ vendors, onHubsUpdated }: HubsManagemen
         throw new Error(data.error || "Failed to delete hub.");
       }
       setSuccessMsg(`Deleted hub: ${hubName}`);
-      void fetchHubs();
+      reloadList();
       onHubsUpdated();
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Failed to delete hub.");
     }
   };
 
-  const filteredHubs = hubs.filter((h) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      h.name.toLowerCase().includes(q) ||
-      h.code.toLowerCase().includes(q) ||
-      h.state.toLowerCase().includes(q) ||
-      (h.gstin || "").toLowerCase().includes(q)
-    );
-  });
-
   const formStateCode = getStateCodeFromName(form.state) || "—";
+  const displayError = errorMsg || listError;
 
   return (
     <div id="hubs-management-root" className="space-y-6">
-      <CompanyBillingProfile />
-
       <div className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-violet-50 rounded-xl">
@@ -247,7 +259,8 @@ export default function HubsManagement({ vendors, onHubsUpdated }: HubsManagemen
           <div>
             <h2 className="text-base font-bold text-gray-900">Logistics Hubs + GST</h2>
             <p className="text-xs text-gray-500">
-              Each hub can carry its own GSTIN and billing address for place-of-supply on vendor tax invoices.
+              Each hub can carry its own GSTIN and billing address for place-of-supply on vendor tax
+              invoices.
             </p>
           </div>
         </div>
@@ -265,7 +278,7 @@ export default function HubsManagement({ vendors, onHubsUpdated }: HubsManagemen
                 : "text-gray-500 hover:text-gray-900"
             }`}
           >
-            All Hubs ({hubs.length})
+            All Hubs ({total})
           </button>
           <button
             type="button"
@@ -302,11 +315,11 @@ export default function HubsManagement({ vendors, onHubsUpdated }: HubsManagemen
         </div>
       )}
 
-      {errorMsg && (
+      {displayError && (
         <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-xs text-red-800 flex flex-col gap-2">
           <div className="flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
-            <span className="font-semibold">{errorMsg}</span>
+            <span className="font-semibold">{displayError}</span>
           </div>
           {bulkErrors.length > 0 && (
             <ul className="mt-2 pl-6 list-disc space-y-1 font-mono text-[10px] text-red-600/80 max-h-[150px] overflow-y-auto">
@@ -334,107 +347,124 @@ export default function HubsManagement({ vendors, onHubsUpdated }: HubsManagemen
               />
             </div>
             <div className="text-[11px] text-gray-400 font-medium whitespace-nowrap self-center">
-              {isLoading ? "Loading..." : `Showing ${filteredHubs.length} of ${hubs.length}`}
+              {isLoading ? "Loading..." : `Showing ${hubs.length} of ${total}`}
             </div>
           </div>
 
           <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-            {filteredHubs.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+                <p className="text-xs font-medium">Loading hubs...</p>
+              </div>
+            ) : hubs.length === 0 ? (
               <div className="text-center py-16 text-gray-400">
                 <Layers className="w-12 h-12 stroke-[1.2] mx-auto mb-3 text-gray-300" />
                 <p className="text-sm font-medium">No logistics hubs found</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-100">
-                  <thead className="bg-gray-50/70">
-                    <tr>
-                      <th className="px-5 py-3.5 text-left text-[10px] font-semibold text-gray-500 uppercase">
-                        Hub
-                      </th>
-                      <th className="px-5 py-3.5 text-left text-[10px] font-semibold text-gray-500 uppercase">
-                        State / Code
-                      </th>
-                      <th className="px-5 py-3.5 text-left text-[10px] font-semibold text-gray-500 uppercase">
-                        GSTIN
-                      </th>
-                      <th className="px-5 py-3.5 text-left text-[10px] font-semibold text-gray-500 uppercase">
-                        Address
-                      </th>
-                      <th className="px-5 py-3.5 text-center text-[10px] font-semibold text-gray-500 uppercase">
-                        Vendors
-                      </th>
-                      <th className="px-5 py-3.5 text-right text-[10px] font-semibold text-gray-500 uppercase">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredHubs.map((hub) => {
-                      const mappedVendorsCount = vendors.filter((v) =>
-                        v.hubs?.includes(hub.id)
-                      ).length;
-                      return (
-                        <tr key={hub.id} className="hover:bg-gray-50/30 align-top">
-                          <td className="px-5 py-4">
-                            <div className="text-sm font-semibold text-gray-900">{hub.name}</div>
-                            <div className="text-[10px] font-mono text-gray-400 mt-0.5">
-                              {hub.code}
-                            </div>
-                          </td>
-                          <td className="px-5 py-4 text-xs text-gray-600">
-                            {hub.state}
-                            <div className="text-[10px] text-gray-400 font-mono">
-                              GST code {hub.stateCode || getStateCodeFromName(hub.state) || "—"}
-                            </div>
-                          </td>
-                          <td className="px-5 py-4">
-                            {hub.gstin ? (
-                              <span className="text-[11px] font-mono font-semibold text-violet-700">
-                                {hub.gstin}
+              <>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-100">
+                    <thead className="bg-gray-50/70">
+                      <tr>
+                        <th className="px-5 py-3.5 text-left text-[10px] font-semibold text-gray-500 uppercase">
+                          Hub
+                        </th>
+                        <th className="px-5 py-3.5 text-left text-[10px] font-semibold text-gray-500 uppercase">
+                          State / Code
+                        </th>
+                        <th className="px-5 py-3.5 text-left text-[10px] font-semibold text-gray-500 uppercase">
+                          GSTIN
+                        </th>
+                        <th className="px-5 py-3.5 text-left text-[10px] font-semibold text-gray-500 uppercase">
+                          Address
+                        </th>
+                        <th className="px-5 py-3.5 text-center text-[10px] font-semibold text-gray-500 uppercase">
+                          Vendors
+                        </th>
+                        <th className="px-5 py-3.5 text-right text-[10px] font-semibold text-gray-500 uppercase">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {hubs.map((hub) => {
+                        const mappedVendorsCount = vendors.filter((v) =>
+                          v.hubs?.includes(hub.id)
+                        ).length;
+                        return (
+                          <tr key={hub.id} className="hover:bg-gray-50/30 align-top">
+                            <td className="px-5 py-4">
+                              <div className="text-sm font-semibold text-gray-900">{hub.name}</div>
+                              <div className="text-[10px] font-mono text-gray-400 mt-0.5">
+                                {hub.code}
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 text-xs text-gray-600">
+                              {hub.state}
+                              <div className="text-[10px] text-gray-400 font-mono">
+                                GST code {hub.stateCode || getStateCodeFromName(hub.state) || "—"}
+                              </div>
+                            </td>
+                            <td className="px-5 py-4">
+                              {hub.gstin ? (
+                                <span className="text-[11px] font-mono font-semibold text-violet-700">
+                                  {hub.gstin}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-amber-600 font-medium">
+                                  Not set — uses company GSTIN if same state
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-5 py-4 text-[11px] text-gray-500 max-w-[220px]">
+                              <span className="whitespace-pre-line">
+                                {hub.billingAddress ||
+                                  [hub.address, hub.city, hub.pincode]
+                                    .filter(Boolean)
+                                    .join(", ") ||
+                                  "—"}
                               </span>
-                            ) : (
-                              <span className="text-[10px] text-amber-600 font-medium">
-                                Not set — uses company GSTIN if same state
+                            </td>
+                            <td className="px-5 py-4 text-center">
+                              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100">
+                                {mappedVendorsCount}
                               </span>
-                            )}
-                          </td>
-                          <td className="px-5 py-4 text-[11px] text-gray-500 max-w-[220px]">
-                            <span className="whitespace-pre-line">
-                              {hub.billingAddress ||
-                                [hub.address, hub.city, hub.pincode].filter(Boolean).join(", ") ||
-                                "—"}
-                            </span>
-                          </td>
-                          <td className="px-5 py-4 text-center">
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100">
-                              {mappedVendorsCount}
-                            </span>
-                          </td>
-                          <td className="px-5 py-4 text-right whitespace-nowrap">
-                            <button
-                              type="button"
-                              onClick={() => startEdit(hub)}
-                              className="text-gray-400 hover:text-violet-600 p-2 hover:bg-violet-50 rounded-lg"
-                              title="Edit hub"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void handleDeleteHub(hub.id, hub.name)}
-                              className="text-gray-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg"
-                              title="Delete hub"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            </td>
+                            <td className="px-5 py-4 text-right whitespace-nowrap">
+                              <button
+                                type="button"
+                                onClick={() => startEdit(hub)}
+                                className="text-gray-400 hover:text-violet-600 p-2 hover:bg-violet-50 rounded-lg"
+                                title="Edit hub"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void handleDeleteHub(hub.id, hub.name)}
+                                className="text-gray-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg"
+                                title="Delete hub"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <ListPagination
+                  page={page}
+                  pageSize={limit}
+                  total={total}
+                  onPageChange={setPage}
+                  onPageSizeChange={setLimit}
+                  accent="orange"
+                />
+              </>
             )}
           </div>
         </div>
@@ -447,7 +477,8 @@ export default function HubsManagement({ vendors, onHubsUpdated }: HubsManagemen
               {editingHubId ? "Edit Hub + GST" : "Register Hub + GST"}
             </h3>
             <p className="text-xs text-gray-500 mt-0.5">
-              GSTIN and address on the hub are used as Bill To / place of supply on vendor-generated tax invoices.
+              GSTIN and address on the hub are used as Bill To / place of supply on vendor-generated
+              tax invoices.
             </p>
           </div>
 

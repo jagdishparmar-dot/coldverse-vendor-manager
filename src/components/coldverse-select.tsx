@@ -19,13 +19,13 @@ export type ColdverseSelectVariant = "default" | "filter" | "compact" | "inline"
 
 const triggerVariants: Record<ColdverseSelectVariant, string> = {
   default:
-    "w-full text-sm px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/30 focus-visible:border-violet-500 focus-visible:ring-2 focus-visible:ring-violet-500/20",
+    "w-full text-sm font-medium px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/30 focus-visible:border-violet-500 focus-visible:ring-2 focus-visible:ring-violet-500/20",
   filter:
-    "w-full text-xs bg-gray-50/50 border border-gray-200 rounded-xl px-3 py-2.5 focus-visible:border-orange-500 focus-visible:ring-2 focus-visible:ring-orange-500/20",
+    "w-full text-xs font-medium bg-gray-50/50 border border-gray-200 rounded-xl px-3 py-2.5 focus-visible:border-orange-500 focus-visible:ring-2 focus-visible:ring-orange-500/20",
   compact:
-    "w-full text-xs px-3 py-2 rounded-xl border border-gray-200 bg-gray-50/50 focus-visible:border-violet-500 focus-visible:ring-2 focus-visible:ring-violet-500/20",
+    "w-full text-xs font-medium px-3 py-2 rounded-xl border border-gray-200 bg-gray-50/50 focus-visible:border-violet-500 focus-visible:ring-2 focus-visible:ring-violet-500/20",
   inline:
-    "w-auto min-w-[140px] text-xs bg-white border border-gray-200 rounded-xl px-3 py-2 focus-visible:border-violet-500 focus-visible:ring-2 focus-visible:ring-violet-500/20",
+    "h-9 w-auto min-w-[140px] text-xs font-semibold bg-white border border-gray-200 rounded-xl px-3 shadow-sm hover:border-orange-200 hover:bg-slate-50 focus-visible:border-orange-300 focus-visible:ring-2 focus-visible:ring-orange-200",
 };
 
 const SEARCH_THRESHOLD = 8;
@@ -113,7 +113,9 @@ export function ColdverseSelect({
           open &&
             (variant === "filter"
               ? "border-orange-500 ring-2 ring-orange-500/20"
-              : "border-violet-500 ring-2 ring-violet-500/20"),
+              : variant === "inline"
+                ? "border-orange-300 ring-2 ring-orange-200"
+                : "border-violet-500 ring-2 ring-violet-500/20"),
           triggerVariants[variant],
           !hasValue && "text-gray-400",
           hasValue && "text-gray-800",
@@ -121,7 +123,7 @@ export function ColdverseSelect({
         )}
         aria-expanded={open}
       >
-        <span className="truncate min-w-0 font-medium">{displayLabel || placeholder}</span>
+        <span className="truncate min-w-0">{displayLabel || placeholder}</span>
         <ChevronDown
           className={cn(
             "h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform duration-150",

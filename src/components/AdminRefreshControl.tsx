@@ -18,30 +18,32 @@ export function AdminRefreshControl({
   onToggleAutoRefresh,
 }: AdminRefreshControlProps) {
   return (
-    <div className="flex items-center rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+    <div className="flex h-9 items-center rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
       <button
         type="button"
         onClick={onRefresh}
         disabled={adminLoading}
-        className="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-orange-600 hover:bg-slate-50 px-3 py-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
+        className="flex h-full items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-orange-600 hover:bg-slate-50 px-3 transition-colors cursor-pointer disabled:opacity-50 outline-none focus-visible:bg-slate-50"
         title="Refresh console data"
       >
         <RefreshCw
-          className={`w-3.5 h-3.5 text-slate-500 ${adminLoading ? "animate-spin text-orange-600" : ""}`}
+          className={`w-3.5 h-3.5 shrink-0 text-slate-500 ${
+            adminLoading ? "animate-spin text-orange-600" : ""
+          }`}
         />
         <span className="hidden sm:inline">
-          {adminLoading ? "Refreshing..." : "Refresh"}
+          {adminLoading ? "Refreshing…" : "Refresh"}
         </span>
       </button>
 
-      <div className="w-px self-stretch bg-gray-200" />
+      <div className="w-px self-stretch bg-gray-200" aria-hidden />
 
       <button
         type="button"
         onClick={onToggleAutoRefresh}
-        className={`flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 transition-all cursor-pointer select-none ${
+        className={`flex h-full items-center gap-1.5 text-xs font-semibold px-2.5 transition-colors cursor-pointer select-none outline-none ${
           isAutoRefreshEnabled
-            ? "bg-orange-50/80 text-orange-700 hover:bg-orange-100/50"
+            ? "bg-orange-50 text-orange-700 hover:bg-orange-100/70"
             : "text-slate-500 hover:bg-slate-50"
         }`}
         title={
@@ -55,8 +57,8 @@ export function AdminRefreshControl({
             isAutoRefreshEnabled ? "bg-orange-500 animate-pulse" : "bg-slate-400"
           }`}
         />
-        <span>
-          {isAutoRefreshEnabled ? `${autoRefreshCountdown}s` : "Auto off"}
+        <span className="tabular-nums">
+          {isAutoRefreshEnabled ? `${autoRefreshCountdown}s` : "Off"}
         </span>
       </button>
     </div>
