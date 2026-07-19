@@ -229,14 +229,12 @@ export default function PortalKycGate({
             <ShieldCheck className="w-8 h-8 stroke-[1.5]" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-display font-bold text-gray-950">KYC Verification in Progress</h2>
+            <h2 className="text-xl font-display font-bold text-gray-950">We&apos;re checking your details</h2>
             <p className="text-sm text-gray-500 leading-relaxed">
-              Thank you for submitting your Business KYC details! Your application has been logged and is
-              under review by the Shree Maruti Finance Desk.
+              Thanks for sharing your business documents. The Shree Maruti accounts team is reviewing them.
             </p>
             <p className="text-xs text-slate-400">
-              As a safeguard, first-time vendors require KYC approval before they can upload invoices. We
-              usually verify credentials within 2-4 business hours.
+              First-time vendors need this approval before uploading invoices. It usually takes 2–4 working hours.
             </p>
           </div>
         </div>
@@ -244,7 +242,7 @@ export default function PortalKycGate({
         {details && (
           <div className="border-t border-gray-100 pt-6 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Submitted KYC Credentials
+              What you submitted
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 text-xs bg-slate-50/50 rounded-2xl p-5 border border-slate-100">
               <div>
@@ -270,7 +268,7 @@ export default function PortalKycGate({
                 <span className="text-slate-400 block text-[10px] font-mono">IFSC: {details.ifscCode}</span>
               </div>
               <div>
-                <span className="text-slate-400 block font-medium">Settlement Beneficiary</span>
+                <span className="text-slate-400 block font-medium">Account holder name</span>
                 <strong className="text-slate-800 font-bold text-xs">{details.beneficiaryName}</strong>
               </div>
               <div>
@@ -360,10 +358,10 @@ export default function PortalKycGate({
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8 shadow-sm space-y-6">
       <div className="space-y-1">
-        <h2 className="text-xl font-display font-bold text-slate-900">Business KYC Enrollment</h2>
+        <h2 className="text-xl font-display font-bold text-slate-900">Complete your business details</h2>
         <p className="text-xs text-slate-500">
-          Please register your corporate details and upload supporting business verification document
-          (GST, Incorporation Letter or Canceled Cheque).
+          Fill in your GST, bank, and company details, then upload one supporting document
+          (GST certificate, incorporation letter, or cancelled cheque).
         </p>
       </div>
 
@@ -371,11 +369,11 @@ export default function PortalKycGate({
         <div className="p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-800 text-xs flex gap-3">
           <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold text-sm">KYC Application Rejected</p>
+            <p className="font-bold text-sm">Details need a correction</p>
             <p className="mt-1">
-              Remarks from Auditor:{" "}
+              Note from accounts:{" "}
               <strong className="font-black text-rose-950">
-                &quot;{vendor.kycDetails?.remarks || "Please verify credentials and submit again"}&quot;
+                &quot;{vendor.kycDetails?.remarks || "Please check your details and submit again"}&quot;
               </strong>
             </p>
             <p className="text-[10px] text-rose-600 mt-1">

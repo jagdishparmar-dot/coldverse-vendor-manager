@@ -10,18 +10,27 @@ import {
   CheckCircle2,
   Send,
   X,
-  ShieldCheck,
+  Loader2,
 } from "lucide-react";
 import type { Vendor, Invoice, Hub, CompanyProfile } from "@/src/types";
 import PortalKycGate from "@/src/components/PortalKycGate";
 import PortalInvoiceGenerator from "@/src/components/PortalInvoiceGenerator";
 import { SmileLogo } from "@/src/components/Logo";
+import { COMPANY_LEGAL_NAME } from "@/src/constants/brand";
 import { ColdverseSelect } from "@/src/components/coldverse-select";
 import { ColdverseDateField } from "@/src/components/coldverse-date-field";
 import PortalUploadHistory from "@/src/features/portal/PortalUploadHistory";
 import { formatCurrency } from "@/src/features/admin/utils";
+import { Input } from "@/components/ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from "@/components/ui/input-otp";
 
 const ALL_CATEGORIES = ["Rent", "Manpower", "Vehicle rent", "Repairs & maintenance", "Electricity", "Others"];
+const OTP_RESEND_COOLDOWN_SEC = 60;
 
 type VendorPortalProps = {
   token: string;
@@ -50,6 +59,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
   const [otpError, setOtpError] = useState("");
   const [isRequestingOtp, setIsRequestingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // Portal Edit Invoice states
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
@@ -145,6 +155,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !otpPhone.trim()) return;
+    if (otpRequested && resendCooldown > 0) return;
     setIsRequestingOtp(true);
     setOtpError("");
     try {
@@ -156,12 +167,13 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Failed to send OTP.");
+        throw new Error(data.error || "Could not send the code. Please try again.");
       }
 
       setOtpRequested(true);
+      setResendCooldown(OTP_RESEND_COOLDOWN_SEC);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to send OTP.";
+      const message = err instanceof Error ? err.message : "Could not send the code. Please try again.";
       setOtpError(message);
     } finally {
       setIsRequestingOtp(false);
@@ -183,7 +195,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Invalid OTP code.");
+        throw new Error(data.error || "That code looks wrong. Please check and try again.");
       }
 
       // Successful login
@@ -204,7 +216,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
       setIsOtpVerified(true);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "OTP verification failed.";
+      const message = err instanceof Error ? err.message : "Could not verify the code. Please try again.";
       setOtpError(message);
     } finally {
       setIsVerifyingOtp(false);
@@ -466,6 +478,15 @@ export default function VendorPortal({ token }: VendorPortalProps) {
     }
   };
 
+  // Countdown for OTP resend cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setTimeout(() => {
+      setResendCooldown((seconds) => (seconds <= 1 ? 0 : seconds - 1));
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
+
   // Load portal data on mount
   useEffect(() => {
     fetchPortalData(token);
@@ -574,160 +595,205 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
   if (portalLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6">
-        <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin"></div>
-        <p className="text-sm font-medium text-slate-500 mt-4">Verifying secure billing token...</p>
+      <div className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center p-4">
+        <div className="flex justify-center mb-8">
+          <SmileLogo />
+        </div>
+        <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+        <p className="text-sm text-slate-500 mt-4">Opening your billing page...</p>
       </div>
     );
   }
 
   if (portalError || (!currentVendor && !portalCheckedVendor)) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6 text-center">
-        <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mb-4">
-          <AlertCircle className="w-8 h-8 stroke-[1.5]" />
+      <div className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="flex justify-center mb-8">
+            <SmileLogo />
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-8 text-center">
+            <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 ring-1 ring-rose-100">
+              <AlertCircle className="w-7 h-7 stroke-[1.5]" />
+            </div>
+            <h1 className="text-xl font-black text-slate-800 uppercase tracking-wider">
+              Link not working
+            </h1>
+            <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+              This invoice upload link is invalid or no longer active. Please ask your Shree Maruti
+              accounts contact for a fresh link.
+            </p>
+          </div>
+          <p className="text-center text-[11px] text-slate-400 mt-6">{COMPANY_LEGAL_NAME}</p>
         </div>
-        <h2 className="text-xl font-display font-bold text-gray-950">Invalid Access Token</h2>
-        <p className="text-sm text-gray-500 max-w-sm mt-1">
-          The billing upload URL you followed is expired, revoked, or formatted incorrectly. Please reach out to your Accounts Manager for a new portal link.
-        </p>
       </div>
     );
   }
 
   // --- RENDER OTP LOGIN SCREEN IF NOT VERIFIED ---
   if (!isOtpVerified && portalCheckedVendor) {
-    return (
-      <div className="min-h-screen bg-slate-50/50 flex flex-col justify-center items-center p-4 relative overflow-hidden">
-        {/* Subtle background decoration */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-600 via-emerald-500 to-indigo-600 font-sans"></div>
+    const otpSlotClass =
+      "size-11 text-base font-bold first:rounded-l-xl last:rounded-r-xl data-[active=true]:border-violet-400 data-[active=true]:ring-violet-100";
 
-        <div className="w-full max-w-md bg-white rounded-3xl border border-gray-100 shadow-xl p-6 sm:p-8 space-y-6 relative z-10 transition-all">
-          <div className="text-center space-y-2">
-            <div className="mx-auto w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center text-violet-600 mb-2">
-              <ShieldCheck className="w-7 h-7 stroke-[1.5]" />
-            </div>
-            <h2 className="text-xl font-display font-black text-slate-900 tracking-tight">Secure Vendor Verification</h2>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Welcome, <span className="font-bold text-slate-800">{portalCheckedVendor.name}</span>.
-              Please verify your identity using your registered mobile number.
-            </p>
+    return (
+      <div className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="flex justify-center mb-8">
+            <SmileLogo />
           </div>
 
-          {otpError && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-100 text-rose-700 text-xs font-semibold leading-relaxed flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{otpError}</span>
-            </div>
-          )}
-
-          {!otpRequested ? (
-            <form onSubmit={handleRequestOtp} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Registered Mobile Number
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 font-bold text-xs">
-                    🇮🇳
-                  </span>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="Enter registered phone number"
-                    value={otpPhone}
-                    onChange={(e) => setOtpPhone(e.target.value)}
-                    className="w-full text-sm pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 font-mono"
-                  />
-                </div>
-                <p className="text-[10px] text-slate-400">
-                  Expected registered format: <span className="font-semibold">{portalCheckedVendor.maskedPhone}</span>
-                </p>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isRequestingOtp || !otpPhone.trim()}
-                className="w-full py-3 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition-all shadow-md shadow-violet-500/10 flex items-center justify-center gap-2"
-              >
-                {isRequestingOtp ? (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-8">
+            <div className="mb-6 text-center">
+              <h1 className="text-xl font-black text-slate-800 uppercase tracking-wider">
+                {otpRequested ? "Enter verification code" : "Vendor sign in"}
+              </h1>
+              <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+                {otpRequested ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Requesting OTP...</span>
+                    We sent a 6-digit code to{" "}
+                    <span className="font-semibold text-slate-700">+91 {otpPhone}</span>
                   </>
                 ) : (
-                  <span>Get Verification OTP</span>
+                  <>
+                    Hi <span className="font-semibold text-slate-700">{portalCheckedVendor.name}</span>
+                    . Enter your registered mobile to upload invoices.
+                  </>
                 )}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-gray-100 text-xs text-slate-600">
-                <div className="flex justify-between items-center">
-                  <span>Mobile: <strong className="text-slate-800">{otpPhone}</strong></span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOtpRequested(false);
-                      setOtpCode("");
-                      setOtpError("");
-                    }}
-                    className="text-violet-600 hover:underline font-bold text-[10px] uppercase"
+              </p>
+            </div>
+
+            {otpError && (
+              <div className="mb-4 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{otpError}</span>
+              </div>
+            )}
+
+            {!otpRequested ? (
+              <form onSubmit={handleRequestOtp} className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="portal-mobile"
+                    className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5"
                   >
-                    Change Number
-                  </button>
+                    Mobile number
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-sm font-semibold">
+                      +91
+                    </span>
+                    <Input
+                      id="portal-mobile"
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      required
+                      maxLength={10}
+                      placeholder="10-digit mobile number"
+                      value={otpPhone}
+                      onChange={(e) => setOtpPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      className="h-10 rounded-xl border-gray-200 pl-12 font-mono tracking-wide focus-visible:border-violet-300 focus-visible:ring-violet-100"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1.5">
+                    Should end with{" "}
+                    <span className="font-semibold text-slate-500">{portalCheckedVendor.maskedPhone}</span>
+                  </p>
                 </div>
-                <p className="text-[10px] text-emerald-600 font-medium leading-none flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse inline-block"></span>
-                  OTP has been sent to your registered mobile number.
-                </p>
-              </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Enter 6-Digit OTP Code
-                </label>
-                <input
-                  type="text"
-                  required
-                  maxLength={6}
-                  placeholder="Enter 6-digit OTP"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                  className="w-full text-center tracking-[0.5em] text-lg font-black font-mono py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleRequestOtp}
-                  disabled={isRequestingOtp}
-                  className="w-1/3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs uppercase tracking-wider transition-all"
-                >
-                  Resend
-                </button>
                 <button
                   type="submit"
-                  disabled={isVerifyingOtp || otpCode.length !== 6}
-                  className="flex-1 py-3 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition-all shadow-md shadow-violet-500/10 flex items-center justify-center gap-2"
+                  disabled={isRequestingOtp || otpPhone.length !== 10}
+                  className="w-full h-11 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-extrabold tracking-wide transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {isVerifyingOtp ? (
+                  {isRequestingOtp ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Verifying...</span>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Sending code...
                     </>
                   ) : (
-                    <span>Verify & Login</span>
+                    "Send code"
                   )}
                 </button>
-              </div>
-            </form>
-          )}
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyOtp} className="space-y-5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-3 text-center">
+                    6-digit code
+                  </label>
+                  <InputOTP
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(value) => setOtpCode(value.replace(/\D/g, ""))}
+                    autoFocus
+                    containerClassName="justify-center gap-2"
+                    aria-invalid={Boolean(otpError)}
+                  >
+                    <InputOTPGroup className="gap-0">
+                      <InputOTPSlot index={0} className={otpSlotClass} />
+                      <InputOTPSlot index={1} className={otpSlotClass} />
+                      <InputOTPSlot index={2} className={otpSlotClass} />
+                    </InputOTPGroup>
+                    <InputOTPSeparator className="text-slate-300" />
+                    <InputOTPGroup className="gap-0">
+                      <InputOTPSlot index={3} className={otpSlotClass} />
+                      <InputOTPSlot index={4} className={otpSlotClass} />
+                      <InputOTPSlot index={5} className={otpSlotClass} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
 
-          <div className="pt-2 text-center text-[10px] text-slate-400">
-            By logging in, you agree to secure transport protocol safeguards.
+                <div className="flex gap-2.5">
+                  <button
+                    type="button"
+                    onClick={handleRequestOtp}
+                    disabled={isRequestingOtp || resendCooldown > 0}
+                    className="h-11 min-w-[7.5rem] px-4 rounded-xl border border-gray-200 bg-white text-slate-700 text-sm font-extrabold tracking-wide hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center whitespace-nowrap"
+                  >
+                    {isRequestingOtp ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : resendCooldown > 0 ? (
+                      `Resend in ${resendCooldown}s`
+                    ) : (
+                      "Resend"
+                    )}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isVerifyingOtp || otpCode.length !== 6}
+                    className="flex-1 h-11 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-extrabold tracking-wide transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isVerifyingOtp ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      "Continue"
+                    )}
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOtpRequested(false);
+                    setOtpCode("");
+                    setOtpError("");
+                    setResendCooldown(0);
+                  }}
+                  className="w-full text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+                >
+                  Use a different mobile number
+                </button>
+              </form>
+            )}
           </div>
+
+          <p className="text-center text-[11px] text-slate-400 mt-6">
+            {COMPANY_LEGAL_NAME}
+          </p>
         </div>
       </div>
     );
@@ -735,9 +801,12 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
   if (!currentVendor) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6">
-        <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin"></div>
-        <p className="text-sm font-medium text-slate-500 mt-4">Preparing your vendor portal...</p>
+      <div className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center p-4">
+        <div className="flex justify-center mb-8">
+          <SmileLogo />
+        </div>
+        <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+        <p className="text-sm text-slate-500 mt-4">Loading your invoices...</p>
       </div>
     );
   }
@@ -776,7 +845,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                 onClick={handlePortalLogout}
                 disabled={isLoggingOut}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                title="End this vendor portal session"
+                title="Log out"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 {isLoggingOut ? "Signing out…" : "Log out"}
@@ -920,7 +989,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                       <h2 className="text-lg font-display font-semibold text-gray-900">Submit Invoice</h2>
                     </div>
                     <span className="text-[10px] bg-violet-100 text-violet-700 font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
-                      Portal Active
+                      Online
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 mb-6">
