@@ -11,6 +11,9 @@ export async function GET(request: Request) {
       hubId: searchParams.get("hubId") || undefined,
       vendorId: searchParams.get("vendorId") || undefined,
       category: searchParams.get("category") || undefined,
+      status: searchParams.get("status") || undefined,
+      month: searchParams.get("month") || undefined,
+      date: searchParams.get("date") || undefined,
     });
     return NextResponse.json(stats);
   } catch (error) {

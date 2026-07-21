@@ -70,6 +70,7 @@ export type ListHubsQuery = {
   page?: number;
   limit?: number;
   search?: string;
+  state?: string;
 };
 
 export async function listHubsPaginated(query: ListHubsQuery = {}) {
@@ -90,6 +91,9 @@ export async function listHubsPaginated(query: ListHubsQuery = {}) {
       { city: { contains: search, mode: "insensitive" } },
       { gstin: { contains: search, mode: "insensitive" } },
     ];
+  }
+  if (query.state && query.state !== "All") {
+    where.state = query.state;
   }
 
   const [rows, total] = await Promise.all([

@@ -20,6 +20,7 @@ export async function GET(request: Request) {
       page,
       limit,
       search: searchParams.get("search") || undefined,
+      state: searchParams.get("state") || undefined,
     });
     return NextResponse.json(result);
   } catch (error) {

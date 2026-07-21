@@ -5,13 +5,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Users,
-  Printer,
   AlertCircle,
   FileText,
-  Search,
   Building2,
   X,
-  SlidersHorizontal,
   Archive,
   Settings,
   ShieldCheck,
@@ -26,10 +23,14 @@ import VendorForm from "./components/VendorForm";
 import { SmileLogo } from "./components/Logo";
 import { portalShareUrl } from "@/src/constants/portalRoutes";
 import { ColdverseSelect } from "@/src/components/coldverse-select";
-import { ColdverseDateField } from "@/src/components/coldverse-date-field";
 import { UserMenu } from "@/src/components/UserMenu";
 import { AdminRefreshControl } from "@/src/components/AdminRefreshControl";
+import AdminTabFilterPanel, {
+  buildStatsSearchParams,
+  resetFiltersForTab,
+} from "@/src/features/admin/components/AdminTabFilterPanel";
 import ChallanPrintModal from "@/src/features/admin/components/ChallanPrintModal";
+import InvoiceAttachmentPrintModal from "@/src/features/admin/components/InvoiceAttachmentPrintModal";
 import { useSession } from "@/lib/auth-client";
 import {
   ADMIN_NAV,
@@ -47,22 +48,6 @@ import {
   InvoicesView,
   SettingsView,
 } from "@/src/features/admin/views";
-
-const MONTH_FILTER_OPTIONS = [
-  { value: "All", label: "All Months" },
-  { value: "01", label: "January" },
-  { value: "02", label: "February" },
-  { value: "03", label: "March" },
-  { value: "04", label: "April" },
-  { value: "05", label: "May" },
-  { value: "06", label: "June" },
-  { value: "07", label: "July" },
-  { value: "08", label: "August" },
-  { value: "09", label: "September" },
-  { value: "10", label: "October" },
-  { value: "11", label: "November" },
-  { value: "12", label: "December" },
-];
 
 const ALL_CATEGORIES = ["Rent", "Manpower", "Vehicle rent", "Repairs & maintenance", "Electricity", "Others"];
 
@@ -158,94 +143,12 @@ export default function App() {
 
     if (activePrintInvoice) {
       return (
-        <>
-          {/* On-screen Modal Print Preview (Hidden during printing) */}
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto screen-only">
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-2xl w-full flex flex-col my-auto transition-all">
-              {/* Modal Header */}
-              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-150/80 bg-slate-50/50 rounded-t-2xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
-                    <Printer className="w-5 h-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-display font-bold text-gray-950 leading-tight">Print Invoice Attachment Only</h2>
-                    <p className="text-[11px] text-gray-400 font-medium font-sans">Prints only the original uploaded invoice document proof</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setActivePrintInvoice(null)}
-                  className="text-gray-400 hover:text-gray-600 hover:bg-slate-100/80 p-1.5 rounded-lg transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-6 md:p-8 bg-slate-100/40 border-b border-gray-100 max-h-[60vh] overflow-y-auto flex flex-col items-center">
-                <div className="bg-white p-4 shadow-md border border-slate-200/80 rounded-xl w-full text-center">
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">Attachment File Document Preview:</p>
-                  {activePrintInvoice.fileType && activePrintInvoice.fileType.startsWith("image/") ? (
-                    <div className="border border-slate-200 rounded-lg overflow-hidden p-2 bg-slate-50 max-h-[400px] flex justify-center items-center">
-                      <img
-                        src={`/api/invoices/view/${activePrintInvoice.id}`}
-                        alt={activePrintInvoice.fileName}
-                        className="max-h-[380px] w-auto object-contain rounded animate-fade-in"
-                      />
-                    </div>
-                  ) : (
-                    <div className="border border-dashed border-slate-200 rounded-lg p-6 bg-slate-50 text-center text-xs text-slate-500">
-                      <p className="font-semibold text-slate-700 mb-1">Non-Image Document Attachment</p>
-                      <p className="text-[10px] text-gray-400 font-mono">File: {activePrintInvoice.fileName} ({activePrintInvoice.fileType})</p>
-                    </div>
-                  )}
-                  <p className="text-[10px] text-emerald-600 font-semibold mt-3 bg-emerald-50 py-1.5 px-3 rounded-lg border border-emerald-100 inline-block">
-                    Note: To comply with printing specifications, only the attachment document itself will be printed.
-                  </p>
-                </div>
-              </div>
-
-              {/* Modal Footer Actions */}
-              <div className="flex justify-between items-center px-6 py-4 border-t border-gray-100 bg-slate-50/50 rounded-b-2xl">
-                <p className="text-[11px] text-gray-400 font-medium">Please set layout to portrait or landscape to fit your document.</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setActivePrintInvoice(null)}
-                    className="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
-                  >
-                    Close Preview
-                  </button>
-                  <button
-                    onClick={() => window.print()}
-                    className="px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Printer className="w-4 h-4" />
-                    Print Now
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Clean, Raw Print-Only version (Visible ONLY to the printer device) */}
-          <div className="print-only bg-white text-black w-full h-full flex flex-col justify-center items-center p-0 m-0">
-            {activePrintInvoice.fileType && activePrintInvoice.fileType.startsWith("image/") ? (
-              <img
-                src={`/api/invoices/view/${activePrintInvoice.id}`}
-                alt={activePrintInvoice.fileName}
-                referrerPolicy="no-referrer"
-                className="max-w-full max-h-[98vh] object-contain mx-auto"
-              />
-            ) : (
-              <div className="border-2 border-dashed border-slate-400 rounded-2xl p-12 bg-white text-center text-sm text-slate-800 max-w-xl mx-auto my-auto">
-                <h2 className="font-extrabold text-2xl mb-4 text-slate-900">Shree Maruti</h2>
-                <h3 className="font-bold text-lg mb-2 text-slate-800">Non-Image Document Attachment</h3>
-                <p className="text-xs font-mono text-slate-600 mb-6">File: {activePrintInvoice.fileName} ({activePrintInvoice.fileType || "Unknown format"})</p>
-                <p className="text-xs text-slate-500 font-medium">Please download this file from your dashboard for full contents.</p>
-              </div>
-            )}
-          </div>
-        </>
+        <InvoiceAttachmentPrintModal
+          invoice={activePrintInvoice}
+          viewUrl={`/api/invoices/view/${activePrintInvoice.id}`}
+          downloadUrl={`/api/invoices/download/${activePrintInvoice.id}`}
+          onClose={() => setActivePrintInvoice(null)}
+        />
       );
     }
 
@@ -268,11 +171,18 @@ export default function App() {
     fetchAdminData("initial");
   }, []);
 
-  // Refetch bootstrap (esp. stats) when header hub filter changes
+  // Refetch dashboard stats when hub or dashboard-applicable filters change
   useEffect(() => {
     if (!hasLoadedOnceRef.current) return;
     fetchAdminData("silent");
-  }, [headerHubFilter]);
+  }, [
+    headerHubFilter,
+    selectedVendorId,
+    invoiceCategoryFilter,
+    invoiceStatusFilter,
+    selectedMonth,
+    selectedDate,
+  ]);
 
   // Clear optimistic tab once the URL has caught up; mark tab as visited (keep-alive)
   useEffect(() => {
@@ -324,10 +234,16 @@ export default function App() {
     }
     setAutoRefreshCountdown(120);
     try {
-      const statsUrl =
-        headerHubFilter !== "All"
-          ? `/api/stats?hubId=${encodeURIComponent(headerHubFilter)}`
-          : "/api/stats";
+      const statsParams = buildStatsSearchParams({
+        headerHubFilter,
+        selectedVendorId,
+        invoiceCategoryFilter,
+        invoiceStatusFilter,
+        selectedMonth,
+        selectedDate,
+      });
+      const statsQuery = statsParams.toString();
+      const statsUrl = statsQuery ? `/api/stats?${statsQuery}` : "/api/stats";
 
       const [sRes, cRes, hRes, voRes, kycRes] = await Promise.all([
         fetch(statsUrl),
@@ -967,127 +883,38 @@ export default function App() {
           </div>
         )}
 
-        {/* Global Filters Panel */}
-        {activeTab !== "vendors" &&
-          activeTab !== "archive" &&
-          activeTab !== "kyc" &&
-          activeTab !== "settings" && (
-          <div id="global-filters-panel" className="bg-white rounded-2xl border-y border-r border-l-4 border-l-orange-500 border-gray-100 p-5 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4 text-orange-600" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">Refine Platform Metrics & Logs</h3>
-              </div>
-              
-              {/* Clear Filters Button */}
-              {(selectedVendorId !== "All" || selectedMonth !== "All" || selectedDate !== "" || invoiceCategoryFilter !== "All" || invoiceStatusFilter !== "All" || invoiceSearch !== "") && (
-                <button
-                  onClick={() => {
-                    setSelectedVendorId("All");
-                    setSelectedMonth("All");
-                    setSelectedDate("");
-                    setInvoiceCategoryFilter("All");
-                    setInvoiceStatusFilter("All");
-                    setInvoiceSearch("");
-                  }}
-                  className="text-[11px] font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1 bg-orange-50/50 hover:bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100 transition-colors cursor-pointer"
-                >
-                  Reset All Filters
-                </button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-              {/* Vendor Filter */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide">Filter by Vendor</label>
-                <ColdverseSelect
-                  value={selectedVendorId}
-                  onValueChange={setSelectedVendorId}
-                  variant="filter"
-                  options={[
-                    { value: "All", label: "All Vendors" },
-                    ...vendorOptions.map((v) => ({ value: v.id, label: v.name })),
-                  ]}
-                />
-              </div>
-
-              {/* Month Filter */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide">Filter by Month</label>
-                <ColdverseSelect
-                  value={selectedMonth}
-                  onValueChange={setSelectedMonth}
-                  variant="filter"
-                  options={MONTH_FILTER_OPTIONS}
-                />
-              </div>
-
-              {/* Specific Date Filter */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide">Filter by Specific Date</label>
-                <div className="relative">
-                  <ColdverseDateField
-                    value={selectedDate}
-                    onValueChange={setSelectedDate}
-                    variant="filter"
-                    clearable
-                    placeholder="Select date"
-                  />
-                </div>
-              </div>
-
-              {/* Category Filter */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide">Filter by Category</label>
-                <ColdverseSelect
-                  value={invoiceCategoryFilter}
-                  onValueChange={setInvoiceCategoryFilter}
-                  variant="filter"
-                  options={[
-                    { value: "All", label: "All Categories" },
-                    ...allCategories.map((cat) => ({ value: cat, label: cat })),
-                  ]}
-                />
-              </div>
-
-              {/* Status Filter */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide">Filter by Status</label>
-                <ColdverseSelect
-                  value={invoiceStatusFilter}
-                  onValueChange={setInvoiceStatusFilter}
-                  variant="filter"
-                  className="font-medium"
-                  options={[
-                    { value: "All", label: "All Statuses" },
-                    { value: "Paid", label: "Paid" },
-                    { value: "Hold", label: "Hold" },
-                    { value: "Rejected", label: "Rejected" },
-                    { value: "Pending", label: "Pending Approval" },
-                  ]}
-                />
-              </div>
-
-              {/* Search filter */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide">Keyword Search</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <Search className="w-3.5 h-3.5" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Invoice no, file..."
-                    value={invoiceSearch}
-                    onChange={(e) => setInvoiceSearch(e.target.value)}
-                    className="w-full text-xs pl-8 pr-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-gray-50/50"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <AdminTabFilterPanel
+          activeTab={activeTab}
+          vendorOptions={vendorOptions}
+          allCategories={allCategories}
+          filters={{
+            selectedVendorId,
+            selectedMonth,
+            selectedDate,
+            invoiceCategoryFilter,
+            invoiceStatusFilter,
+            invoiceSearch,
+          }}
+          onVendorChange={setSelectedVendorId}
+          onMonthChange={setSelectedMonth}
+          onDateChange={setSelectedDate}
+          onCategoryChange={setInvoiceCategoryFilter}
+          onStatusChange={setInvoiceStatusFilter}
+          onSearchChange={setInvoiceSearch}
+          onReset={() => {
+            const reset = resetFiltersForTab(activeTab);
+            if (reset.selectedVendorId !== undefined) setSelectedVendorId(reset.selectedVendorId);
+            if (reset.selectedMonth !== undefined) setSelectedMonth(reset.selectedMonth);
+            if (reset.selectedDate !== undefined) setSelectedDate(reset.selectedDate);
+            if (reset.invoiceCategoryFilter !== undefined) {
+              setInvoiceCategoryFilter(reset.invoiceCategoryFilter);
+            }
+            if (reset.invoiceStatusFilter !== undefined) {
+              setInvoiceStatusFilter(reset.invoiceStatusFilter);
+            }
+            if (reset.invoiceSearch !== undefined) setInvoiceSearch(reset.invoiceSearch);
+          }}
+        />
 
         {/* Dashboard remounts on visit (Chart.js needs a real layout box); other tabs stay mounted. */}
         {activeTab === "dashboard" && (
@@ -1143,14 +970,11 @@ export default function App() {
             <InvoicesView
               headerHubFilter={headerHubFilter}
               invoiceSearch={invoiceSearch}
-              onInvoiceSearchChange={setInvoiceSearch}
               invoiceCategoryFilter={invoiceCategoryFilter}
-              onInvoiceCategoryFilterChange={setInvoiceCategoryFilter}
               invoiceStatusFilter={invoiceStatusFilter}
               selectedVendorId={selectedVendorId}
               selectedMonth={selectedMonth}
               selectedDate={selectedDate}
-              allCategories={allCategories}
               vendorOptions={vendorOptions}
               hubs={hubs}
               refreshKey={listRefreshKey}
@@ -1171,6 +995,12 @@ export default function App() {
           <div hidden={activeTab !== "remarks"} className={activeTab === "remarks" ? undefined : "hidden"}>
             <RemarksView
               headerHubFilter={headerHubFilter}
+              invoiceSearch={invoiceSearch}
+              invoiceStatusFilter={invoiceStatusFilter}
+              selectedVendorId={selectedVendorId}
+              selectedMonth={selectedMonth}
+              selectedDate={selectedDate}
+              onStatusFilterChange={setInvoiceStatusFilter}
               refreshKey={listRefreshKey}
               onEditStatus={(inv) => {
                 setStatusEditInvoice(inv);

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { Download, Inbox, Loader2, Pencil, Printer, Search } from "lucide-react";
+import { useCallback } from "react";
+import { Download, Inbox, Loader2, Pencil, Printer } from "lucide-react";
 import { ListPagination } from "@/src/components/ListPagination";
 import {
   usePaginatedList,
@@ -12,6 +12,12 @@ import { formatCurrency } from "@/src/features/admin/utils";
 
 type RemarksViewProps = {
   headerHubFilter: string;
+  invoiceSearch: string;
+  invoiceStatusFilter: string;
+  selectedVendorId: string;
+  selectedMonth: string;
+  selectedDate: string;
+  onStatusFilterChange: (status: string) => void;
   refreshKey: number | string;
   onEditStatus: (inv: Invoice) => void;
   onPrintInvoice: (inv: Invoice) => void;
@@ -19,13 +25,24 @@ type RemarksViewProps = {
 
 export default function RemarksView({
   headerHubFilter,
+  invoiceSearch,
+  invoiceStatusFilter,
+  selectedVendorId,
+  selectedMonth,
+  selectedDate,
+  onStatusFilterChange,
   refreshKey,
   onEditStatus,
   onPrintInvoice,
 }: RemarksViewProps) {
-  const [search, setSearch] = useState("");
-
-  const filterKey = `${search}|${headerHubFilter}`;
+  const filterKey = [
+    invoiceSearch,
+    invoiceStatusFilter,
+    selectedVendorId,
+    selectedMonth,
+    selectedDate,
+    headerHubFilter,
+  ].join("|");
   const listRefreshKey = `${refreshKey}|${filterKey}`;
 
   const buildUrl = useCallback(
@@ -34,14 +51,33 @@ export default function RemarksView({
       params.set("page", String(page));
       params.set("limit", String(limit));
       params.set("hasRemarks", "1");
-      const q = search.trim();
+      const q = invoiceSearch.trim();
       if (q) params.set("search", q);
+      if (invoiceStatusFilter && invoiceStatusFilter !== "All") {
+        params.set("status", invoiceStatusFilter);
+      }
+      if (selectedVendorId && selectedVendorId !== "All") {
+        params.set("vendorId", selectedVendorId);
+      }
       if (headerHubFilter && headerHubFilter !== "All") {
         params.set("hubId", headerHubFilter);
       }
+      if (selectedMonth && selectedMonth !== "All") {
+        params.set("month", selectedMonth);
+      }
+      if (selectedDate) {
+        params.set("date", selectedDate);
+      }
       return `/api/invoices?${params.toString()}`;
     },
-    [search, headerHubFilter]
+    [
+      invoiceSearch,
+      invoiceStatusFilter,
+      selectedVendorId,
+      headerHubFilter,
+      selectedMonth,
+      selectedDate,
+    ]
   );
 
   const {
@@ -67,63 +103,85 @@ export default function RemarksView({
   const rejectedCount = statusCounts.Rejected || 0;
   const paidCount = statusCounts.Paid || 0;
 
+  const toggleStatusFilter = (status: string) => {
+    onStatusFilterChange(invoiceStatusFilter === status ? "All" : status);
+  };
+
+  const kpiCardClass = (status: string, idle: string, active: string) =>
+    `p-5 rounded-2xl border shadow-sm cursor-pointer transition-all hover:-translate-y-0.5 text-left ${
+      invoiceStatusFilter === status ? active : idle
+    }`;
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+        <button
+          type="button"
+          onClick={() => onStatusFilterChange("All")}
+          className={`bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-left cursor-pointer transition-all hover:-translate-y-0.5 ${
+            invoiceStatusFilter === "All" ? "ring-2 ring-offset-1 ring-orange-400" : ""
+          }`}
+        >
           <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
             Total Flagged Remarks
           </div>
           <div className="text-2xl font-black text-gray-900">{total}</div>
           <p className="text-[10px] text-gray-500 mt-1">Invoices with summary notes</p>
-        </div>
-        <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100 shadow-sm">
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleStatusFilter("Hold")}
+          className={kpiCardClass(
+            "Hold",
+            "bg-amber-50/30 border-amber-100",
+            "bg-amber-50/50 border-amber-100 ring-2 ring-offset-1 ring-orange-400"
+          )}
+        >
           <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">
             Hold Remarks
           </div>
           <div className="text-2xl font-black text-amber-700">{holdCount}</div>
           <p className="text-[10px] text-amber-600 mt-1">Awaiting corrections/approvals</p>
-        </div>
-        <div className="bg-rose-50/50 p-5 rounded-2xl border border-rose-100 shadow-sm">
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleStatusFilter("Rejected")}
+          className={kpiCardClass(
+            "Rejected",
+            "bg-rose-50/30 border-rose-100",
+            "bg-rose-50/50 border-rose-100 ring-2 ring-offset-1 ring-orange-400"
+          )}
+        >
           <div className="text-[10px] font-bold text-rose-600 uppercase tracking-wider mb-1">
             Rejected Remarks
           </div>
           <div className="text-2xl font-black text-rose-700">{rejectedCount}</div>
           <p className="text-[10px] text-rose-600 mt-1">Invoices flagged as returned/denied</p>
-        </div>
-        <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100 shadow-sm">
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleStatusFilter("Paid")}
+          className={kpiCardClass(
+            "Paid",
+            "bg-emerald-50/30 border-emerald-100",
+            "bg-emerald-50/50 border-emerald-100 ring-2 ring-offset-1 ring-orange-400"
+          )}
+        >
           <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">
             Cleared / Paid Summary
           </div>
           <div className="text-2xl font-black text-emerald-700">{paidCount}</div>
           <p className="text-[10px] text-emerald-600 mt-1">Resolved notes & payments</p>
-        </div>
+        </button>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-base font-display font-semibold text-gray-900">
-            Flagged Invoices & Remarks
-          </h3>
-          <p className="text-xs text-gray-500">
-            Highlighting all invoices with active summaries, notes, and remarks.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative w-64">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-              <Search className="w-4 h-4" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search remarks, vendors, INV no..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full text-xs pl-9 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
-            />
-          </div>
-        </div>
+      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+        <h3 className="text-base font-display font-semibold text-gray-900">
+          Flagged Invoices & Remarks
+        </h3>
+        <p className="text-xs text-gray-500 mt-1">
+          Use the filter panel above. Click a summary card to filter by status.
+        </p>
       </div>
 
       {error && (
@@ -141,7 +199,7 @@ export default function RemarksView({
         <div className="bg-white p-12 text-center rounded-2xl border border-gray-100 shadow-sm text-gray-400">
           <Inbox className="w-12 h-12 stroke-[1.2] mx-auto mb-3 text-gray-300" />
           <p className="text-sm font-medium">No active remarks match your criteria</p>
-          <p className="text-xs mt-1">Try resetting the search query above.</p>
+          <p className="text-xs mt-1">Try adjusting filters in the panel above.</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">

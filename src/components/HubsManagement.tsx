@@ -52,8 +52,9 @@ export default function HubsManagement({
   const [successMsg, setSuccessMsg] = useState("");
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [stateFilter, setStateFilter] = useState("All");
 
-  const filterKey = searchQuery;
+  const filterKey = `${searchQuery}|${stateFilter}`;
 
   const buildUrl = useCallback(
     (page: number, limit: number) => {
@@ -62,9 +63,12 @@ export default function HubsManagement({
       params.set("limit", String(limit));
       const q = searchQuery.trim();
       if (q) params.set("search", q);
+      if (stateFilter && stateFilter !== "All") {
+        params.set("state", stateFilter);
+      }
       return `/api/hubs?${params.toString()}`;
     },
-    [searchQuery]
+    [searchQuery, stateFilter]
   );
 
   const {
@@ -346,6 +350,29 @@ export default function HubsManagement({
                 className="w-full text-xs pl-9 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 bg-gray-50/20"
               />
             </div>
+            <div className="w-full sm:w-52">
+              <ColdverseSelect
+                value={stateFilter}
+                onValueChange={setStateFilter}
+                variant="inline"
+                options={[
+                  { value: "All", label: "All States" },
+                  ...INDIAN_STATES.map((state) => ({ value: state, label: state })),
+                ]}
+              />
+            </div>
+            {(searchQuery || stateFilter !== "All") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setStateFilter("All");
+                }}
+                className="text-[11px] font-semibold text-orange-600 hover:text-orange-700 px-3 py-2 rounded-lg border border-orange-100 bg-orange-50/50 whitespace-nowrap cursor-pointer"
+              >
+                Reset Hub Filters
+              </button>
+            )}
             <div className="text-[11px] text-gray-400 font-medium whitespace-nowrap self-center">
               {isLoading ? "Loading..." : `Showing ${hubs.length} of ${total}`}
             </div>

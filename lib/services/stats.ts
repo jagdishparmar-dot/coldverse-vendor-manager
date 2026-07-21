@@ -5,7 +5,37 @@ export type DashboardStatsQuery = {
   hubId?: string;
   vendorId?: string;
   category?: string;
+  status?: string;
+  month?: string;
+  date?: string;
 };
+
+function applyInvoiceFilters(
+  query: DashboardStatsQuery,
+  base: Prisma.InvoiceWhereInput = { archived: false }
+): Prisma.InvoiceWhereInput {
+  const where: Prisma.InvoiceWhereInput = { ...base };
+
+  if (query.hubId && query.hubId !== "All") {
+    where.hubId = query.hubId;
+  }
+  if (query.vendorId && query.vendorId !== "All") {
+    where.vendorId = query.vendorId;
+  }
+  if (query.category && query.category !== "All") {
+    where.category = query.category;
+  }
+  if (query.status && query.status !== "All") {
+    where.status = query.status;
+  }
+  if (query.date) {
+    where.date = query.date;
+  } else if (query.month && query.month !== "All") {
+    where.date = { contains: `-${query.month}-` };
+  }
+
+  return where;
+}
 
 const MONTH_LABELS = [
   "Jan",
@@ -23,21 +53,14 @@ const MONTH_LABELS = [
 ];
 
 export async function getDashboardStats(query: DashboardStatsQuery = {}) {
-  const invoiceWhere: Prisma.InvoiceWhereInput = { archived: false };
-
-  if (query.hubId && query.hubId !== "All") {
-    invoiceWhere.hubId = query.hubId;
-  }
-  if (query.vendorId && query.vendorId !== "All") {
-    invoiceWhere.vendorId = query.vendorId;
-  }
-  if (query.category && query.category !== "All") {
-    invoiceWhere.category = query.category;
-  }
+  const invoiceWhere = applyInvoiceFilters(query);
 
   const vendorWhere: Prisma.VendorWhereInput = { archived: false };
   if (query.hubId && query.hubId !== "All") {
     vendorWhere.hubIds = { has: query.hubId };
+  }
+  if (query.vendorId && query.vendorId !== "All") {
+    vendorWhere.id = query.vendorId;
   }
 
   const hubFilter =
@@ -51,6 +74,15 @@ export async function getDashboardStats(query: DashboardStatsQuery = {}) {
   const categoryFilter =
     query.category && query.category !== "All"
       ? Prisma.sql`AND category = ${query.category}`
+      : Prisma.empty;
+  const statusFilter =
+    query.status && query.status !== "All"
+      ? Prisma.sql`AND status = ${query.status}`
+      : Prisma.empty;
+  const dateFilter = query.date
+    ? Prisma.sql`AND date = ${query.date}`
+    : query.month && query.month !== "All"
+      ? Prisma.sql`AND date LIKE ${`%-${query.month}-%`}`
       : Prisma.empty;
 
   const [
@@ -97,6 +129,8 @@ export async function getDashboardStats(query: DashboardStatsQuery = {}) {
       ${hubFilter}
       ${vendorFilter}
       ${categoryFilter}
+      ${statusFilter}
+      ${dateFilter}
       GROUP BY 1
       ORDER BY 1 ASC
       LIMIT 24

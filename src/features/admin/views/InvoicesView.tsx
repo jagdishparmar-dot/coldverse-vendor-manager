@@ -4,14 +4,11 @@ import { useCallback } from "react";
 import {
   Download,
   FileCheck,
-  Filter,
   Inbox,
   Loader2,
   Printer,
-  Search,
   Trash2,
 } from "lucide-react";
-import { ColdverseSelect } from "@/src/components/coldverse-select";
 import { ListPagination } from "@/src/components/ListPagination";
 import {
   usePaginatedList,
@@ -26,14 +23,11 @@ type VendorOption = { id: string; name: string };
 type InvoicesViewProps = {
   headerHubFilter: string;
   invoiceSearch: string;
-  onInvoiceSearchChange: (value: string) => void;
   invoiceCategoryFilter: string;
-  onInvoiceCategoryFilterChange: (value: string) => void;
   invoiceStatusFilter: string;
   selectedVendorId: string;
   selectedMonth: string;
   selectedDate: string;
-  allCategories: string[];
   vendorOptions: VendorOption[];
   hubs: Hub[];
   refreshKey: number | string;
@@ -46,14 +40,11 @@ type InvoicesViewProps = {
 export default function InvoicesView({
   headerHubFilter,
   invoiceSearch,
-  onInvoiceSearchChange,
   invoiceCategoryFilter,
-  onInvoiceCategoryFilterChange,
   invoiceStatusFilter,
   selectedVendorId,
   selectedMonth,
   selectedDate,
-  allCategories,
   vendorOptions,
   hubs,
   refreshKey,
@@ -130,32 +121,8 @@ export default function InvoicesView({
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
       <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
-        <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative flex-1 max-w-xs">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-              <Search className="w-4 h-4" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search by vendor, invoice no..."
-              value={invoiceSearch}
-              onChange={(e) => onInvoiceSearchChange(e.target.value)}
-              className="w-full text-xs pl-9 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-gray-400" />
-            <ColdverseSelect
-              value={invoiceCategoryFilter}
-              onValueChange={onInvoiceCategoryFilterChange}
-              variant="inline"
-              options={[
-                { value: "All", label: "All Categories" },
-                ...allCategories.map((cat) => ({ value: cat, label: cat })),
-              ]}
-            />
-          </div>
+        <div className="text-[11px] text-gray-500 font-medium">
+          Use the filter panel above to search and narrow invoice records.
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
@@ -314,7 +281,7 @@ export default function InvoicesView({
                         onClick={() => onPrintChallan(inv)}
                         className="text-xs text-violet-600 hover:text-violet-700 font-semibold flex items-center gap-1.5 hover:underline text-left cursor-pointer"
                       >
-                        <FileCheck className="w-3.5 h-3.5 text-violet-500" />
+                        <FileCheck className="w-3.5 h-3.5" />
                         Print Challan
                       </button>
                     </div>

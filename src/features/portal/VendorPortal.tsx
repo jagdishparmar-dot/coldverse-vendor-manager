@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import {
   LogOut,
-  Printer,
   Upload,
   AlertCircle,
   FileText,
@@ -20,6 +19,7 @@ import { COMPANY_LEGAL_NAME } from "@/src/constants/brand";
 import { ColdverseSelect } from "@/src/components/coldverse-select";
 import { ColdverseDateField } from "@/src/components/coldverse-date-field";
 import PortalUploadHistory from "@/src/features/portal/PortalUploadHistory";
+import InvoiceAttachmentPrintModal from "@/src/features/admin/components/InvoiceAttachmentPrintModal";
 import { formatCurrency } from "@/src/features/admin/utils";
 import { Input } from "@/components/ui/input";
 import {
@@ -507,100 +507,15 @@ export default function VendorPortal({ token }: VendorPortalProps) {
   const renderPrintAndPreview = () => {
     if (!activePrintInvoice) return null;
 
-    if (activePrintInvoice) {
-      return (
-        <>
-          {/* On-screen Modal Print Preview (Hidden during printing) */}
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto screen-only">
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-2xl w-full flex flex-col my-auto transition-all">
-              {/* Modal Header */}
-              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-150/80 bg-slate-50/50 rounded-t-2xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
-                    <Printer className="w-5 h-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-display font-bold text-gray-950 leading-tight">Print Invoice Attachment Only</h2>
-                    <p className="text-[11px] text-gray-400 font-medium font-sans">Prints only the original uploaded invoice document proof</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setActivePrintInvoice(null)}
-                  className="text-gray-400 hover:text-gray-600 hover:bg-slate-100/80 p-1.5 rounded-lg transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-6 md:p-8 bg-slate-100/40 border-b border-gray-100 max-h-[60vh] overflow-y-auto flex flex-col items-center">
-                <div className="bg-white p-4 shadow-md border border-slate-200/80 rounded-xl w-full text-center">
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">Attachment File Document Preview:</p>
-                  {activePrintInvoice.fileType && activePrintInvoice.fileType.startsWith("image/") ? (
-                    <div className="border border-slate-200 rounded-lg overflow-hidden p-2 bg-slate-50 max-h-[400px] flex justify-center items-center">
-                      <img
-                        src={`/api/invoices/view/${activePrintInvoice.id}?token=${encodeURIComponent(token)}`}
-                        alt={activePrintInvoice.fileName}
-                        className="max-h-[380px] w-auto object-contain rounded animate-fade-in"
-                      />
-                    </div>
-                  ) : (
-                    <div className="border border-dashed border-slate-200 rounded-lg p-6 bg-slate-50 text-center text-xs text-slate-500">
-                      <p className="font-semibold text-slate-700 mb-1">Non-Image Document Attachment</p>
-                      <p className="text-[10px] text-gray-400 font-mono">File: {activePrintInvoice.fileName} ({activePrintInvoice.fileType})</p>
-                    </div>
-                  )}
-                  <p className="text-[10px] text-emerald-600 font-semibold mt-3 bg-emerald-50 py-1.5 px-3 rounded-lg border border-emerald-100 inline-block">
-                    Note: To comply with printing specifications, only the attachment document itself will be printed.
-                  </p>
-                </div>
-              </div>
-
-              {/* Modal Footer Actions */}
-              <div className="flex justify-between items-center px-6 py-4 border-t border-gray-100 bg-slate-50/50 rounded-b-2xl">
-                <p className="text-[11px] text-gray-400 font-medium">Please set layout to portrait or landscape to fit your document.</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setActivePrintInvoice(null)}
-                    className="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
-                  >
-                    Close Preview
-                  </button>
-                  <button
-                    onClick={() => window.print()}
-                    className="px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Printer className="w-4 h-4" />
-                    Print Now
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Clean, Raw Print-Only version (Visible ONLY to the printer device) */}
-          <div className="print-only bg-white text-black w-full h-full flex flex-col justify-center items-center p-0 m-0">
-            {activePrintInvoice.fileType && activePrintInvoice.fileType.startsWith("image/") ? (
-              <img
-                src={`/api/invoices/view/${activePrintInvoice.id}?token=${encodeURIComponent(token)}`}
-                alt={activePrintInvoice.fileName}
-                referrerPolicy="no-referrer"
-                className="max-w-full max-h-[98vh] object-contain mx-auto"
-              />
-            ) : (
-              <div className="border-2 border-dashed border-slate-400 rounded-2xl p-12 bg-white text-center text-sm text-slate-800 max-w-xl mx-auto my-auto">
-                <h2 className="font-extrabold text-2xl mb-4 text-slate-900">Shree Maruti</h2>
-                <h3 className="font-bold text-lg mb-2 text-slate-800">Non-Image Document Attachment</h3>
-                <p className="text-xs font-mono text-slate-600 mb-6">File: {activePrintInvoice.fileName} ({activePrintInvoice.fileType || "Unknown format"})</p>
-                <p className="text-xs text-slate-500 font-medium">Please download this file from your dashboard for full contents.</p>
-              </div>
-            )}
-          </div>
-        </>
-      );
-    }
-
-    return null;
+    const tokenParam = encodeURIComponent(token);
+    return (
+      <InvoiceAttachmentPrintModal
+        invoice={activePrintInvoice}
+        viewUrl={`/api/invoices/view/${activePrintInvoice.id}?token=${tokenParam}`}
+        downloadUrl={`/api/invoices/download/${activePrintInvoice.id}?token=${tokenParam}`}
+        onClose={() => setActivePrintInvoice(null)}
+      />
+    );
   };
 
   // ================= PORTAL RENDERING =================
