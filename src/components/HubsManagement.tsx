@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -12,9 +12,18 @@ import {
   Search,
   Pencil,
   Loader2,
+  Download,
+  HelpCircle,
 } from "lucide-react";
 import { Hub, Vendor } from "../types";
 import { INDIAN_STATES } from "../constants";
+import {
+  HUB_BULK_CSV_FILENAME,
+  HUB_BULK_CSV_HEADERS,
+  HUB_BULK_CSV_TEMPLATE_PATH,
+  buildHubBulkCsvContent,
+  parseHubBulkText,
+} from "../constants/hubBulkCsv";
 import { ColdverseSelect } from "@/src/components/coldverse-select";
 import { ListPagination } from "@/src/components/ListPagination";
 import {
@@ -53,6 +62,8 @@ export default function HubsManagement({
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [stateFilter, setStateFilter] = useState("All");
+  const [isDraggingBulkFile, setIsDraggingBulkFile] = useState(false);
+  const bulkFileInputRef = useRef<HTMLInputElement>(null);
 
   const filterKey = `${searchQuery}|${stateFilter}`;
 
@@ -177,33 +188,14 @@ export default function HubsManagement({
     clearNotifications();
 
     if (!bulkText.trim()) {
-      setErrorMsg("Please paste hub details to upload.");
+      setErrorMsg("Please paste hub rows or load the CSV template.");
       return;
     }
 
-    const lines = bulkText
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
-    const hubsList: Array<Record<string, string>> = [];
-    const errors: string[] = [];
+    const { rows: hubsList, errors: parseErrors } = parseHubBulkText(bulkText);
 
-    lines.forEach((line, index) => {
-      const parts = line.split(/[,\t]/).map((p) => p.trim());
-      if (parts.length < 3) {
-        errors.push(`Line ${index + 1}: Expected at least Name, Code, State.`);
-        return;
-      }
-      const [name, code, state, address = "", city = "", pincode = "", gstin = ""] = parts;
-      if (!name || !code || !state) {
-        errors.push(`Line ${index + 1}: Name, Code, and State are required.`);
-        return;
-      }
-      hubsList.push({ name, code, state, address, city, pincode, gstin });
-    });
-
-    if (errors.length > 0 && hubsList.length === 0) {
-      setBulkErrors(errors);
+    if (parseErrors.length > 0 && hubsList.length === 0) {
+      setBulkErrors(parseErrors);
       setErrorMsg("Could not parse any valid hub rows.");
       return;
     }
@@ -219,18 +211,61 @@ export default function HubsManagement({
         throw new Error(data.error || "Bulk upload failed.");
       }
       if (data.errors?.length) {
-        setBulkErrors([...errors, ...data.errors]);
+        setBulkErrors([...parseErrors, ...data.errors]);
         setErrorMsg("Bulk upload completed with some errors.");
       } else {
-        setSuccessMsg(data.message || "All hubs imported successfully!");
-        setBulkText("");
-        setActiveSubTab("list");
+        if (parseErrors.length > 0) {
+          setBulkErrors(parseErrors);
+          setErrorMsg("Imported valid rows. Some lines were skipped.");
+        } else {
+          setSuccessMsg(data.message || "All hubs imported successfully!");
+          setBulkText("");
+          setActiveSubTab("list");
+        }
       }
       reloadList();
       onHubsUpdated();
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Bulk upload failed.");
     }
+  };
+
+  const downloadHubTemplate = () => {
+    const content = buildHubBulkCsvContent();
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = HUB_BULK_CSV_FILENAME;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const loadHubTemplate = async () => {
+    clearNotifications();
+    try {
+      const res = await fetch(HUB_BULK_CSV_TEMPLATE_PATH);
+      const text = res.ok ? await res.text() : buildHubBulkCsvContent();
+      setBulkText(text.trimEnd());
+    } catch {
+      setBulkText(buildHubBulkCsvContent().trimEnd());
+    }
+  };
+
+  const applyBulkCsvFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === "string" ? reader.result : "";
+      setBulkText(text.trimEnd());
+      clearNotifications();
+    };
+    reader.readAsText(file);
+  };
+
+  const handleBulkFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) applyBulkCsvFile(file);
+    e.target.value = "";
   };
 
   const handleDeleteHub = async (hubId: string, hubName: string) => {
@@ -637,27 +672,111 @@ export default function HubsManagement({
             <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
               Bulk Import Hubs
             </h3>
-            <div className="mt-3 bg-gray-50 p-3 rounded-xl border border-gray-100 font-mono text-[11px] text-gray-600">
-              Format: Hub Name, Code, State [, Address, City, Pincode, GSTIN]
-              <br />
-              Ahmedabad Main Hub, AMD-01, Gujarat, SG Highway, Ahmedabad, 380051, 24AABCC0000A1Z5
+            <p className="text-xs text-gray-500 mt-1">
+              Download the CSV template, fill hub rows, then upload or paste to import in bulk.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-5 space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={downloadHubTemplate}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-100 transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download CSV template
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void loadHubTemplate()}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  Load sample in editor
+                </button>
+              </div>
+
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDraggingBulkFile(true);
+                }}
+                onDragLeave={() => setIsDraggingBulkFile(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDraggingBulkFile(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) applyBulkCsvFile(file);
+                }}
+                onClick={() => bulkFileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                  isDraggingBulkFile
+                    ? "border-violet-500 bg-violet-50/50"
+                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                }`}
+              >
+                <input
+                  type="file"
+                  ref={bulkFileInputRef}
+                  onChange={handleBulkFileChange}
+                  accept=".csv,.txt"
+                  className="hidden"
+                />
+                <div className="w-10 h-10 bg-violet-50 text-violet-600 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <p className="text-sm font-medium text-gray-900">Drag & drop CSV file here</p>
+                <p className="text-xs text-gray-500 mt-1">or click to browse from device</p>
+              </div>
+
+              <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4 space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                  CSV template guide
+                </p>
+                <p className="text-[11px] text-gray-600 font-mono break-all">
+                  {HUB_BULK_CSV_HEADERS.join(", ")}
+                </p>
+                <ul className="text-[11px] text-gray-600 space-y-1 list-disc pl-4">
+                  <li>
+                    <span className="font-semibold">Name, Code, State</span> are required on every
+                    row.
+                  </li>
+                  <li>
+                    <span className="font-semibold">Code</span> must be unique (e.g. AMD-01).
+                  </li>
+                  <li>
+                    <span className="font-semibold">State</span> must match an Indian state/UT name
+                    from the hub form.
+                  </li>
+                  <li>
+                    <span className="font-semibold">GSTIN</span> is optional; leave blank if the hub
+                    uses the company GSTIN for that state.
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="lg:col-span-7">
+              <form onSubmit={(e) => void handleCreateBulk(e)} className="space-y-4 h-full flex flex-col">
+                <textarea
+                  required
+                  rows={14}
+                  value={bulkText}
+                  onChange={(e) => setBulkText(e.target.value)}
+                  placeholder={`${HUB_BULK_CSV_HEADERS.join(",")}\nAhmedabad Main Hub,AMD-01,Gujarat,SG Highway,Ahmedabad,380051,24AABCC0000A1Z5`}
+                  className="w-full flex-1 min-h-[280px] text-sm font-mono p-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 bg-gray-50/20"
+                />
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-violet-600 text-white text-xs font-bold rounded-xl hover:bg-violet-700 inline-flex items-center gap-1.5 cursor-pointer self-start"
+                >
+                  <Upload className="w-4 h-4" /> Start Bulk Import
+                </button>
+              </form>
             </div>
           </div>
-          <form onSubmit={(e) => void handleCreateBulk(e)} className="space-y-4">
-            <textarea
-              required
-              rows={6}
-              value={bulkText}
-              onChange={(e) => setBulkText(e.target.value)}
-              className="w-full text-sm font-mono p-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 bg-gray-50/20"
-            />
-            <button
-              type="submit"
-              className="px-5 py-2.5 bg-violet-600 text-white text-xs font-bold rounded-xl hover:bg-violet-700 inline-flex items-center gap-1.5"
-            >
-              <Upload className="w-4 h-4" /> Start Bulk Import
-            </button>
-          </form>
         </div>
       )}
     </div>

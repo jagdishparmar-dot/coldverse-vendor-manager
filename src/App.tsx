@@ -958,7 +958,6 @@ export default function App() {
             <KycView
               refreshKey={listRefreshKey}
               onRefresh={() => {
-                bumpListRefresh();
                 fetchAdminData("silent");
               }}
             />

@@ -21,7 +21,7 @@ type UsePaginatedListResult<T> = {
   error: string;
   setPage: (page: number) => void;
   setLimit: (limit: PageSize) => void;
-  reload: () => void;
+  reload: (options?: { silent?: boolean }) => void;
   /** Extra fields from last response (e.g. statusCounts) */
   meta: Record<string, unknown>;
 };
@@ -39,7 +39,13 @@ export function usePaginatedList<T>(
   const [error, setError] = useState("");
   const [tick, setTick] = useState(0);
   const buildUrlRef = useRef(buildUrl);
+  const silentReloadRef = useRef(false);
   buildUrlRef.current = buildUrl;
+
+  const reload = useCallback((options?: { silent?: boolean }) => {
+    silentReloadRef.current = options?.silent ?? false;
+    setTick((n) => n + 1);
+  }, []);
 
   const setLimit = useCallback((next: PageSize) => {
     setLimitState(next);
@@ -57,8 +63,13 @@ export function usePaginatedList<T>(
     }
 
     let cancelled = false;
-    setLoading(true);
-    setError("");
+    const silent = silentReloadRef.current;
+    silentReloadRef.current = false;
+
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
 
     void (async () => {
       try {
@@ -95,8 +106,10 @@ export function usePaginatedList<T>(
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to load list.");
-          setItems([]);
-          setTotal(0);
+          if (!silent) {
+            setItems([]);
+            setTotal(0);
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -117,7 +130,7 @@ export function usePaginatedList<T>(
     error,
     setPage,
     setLimit,
-    reload: () => setTick((n) => n + 1),
+    reload,
     meta,
   };
 }
