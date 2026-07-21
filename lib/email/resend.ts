@@ -6,6 +6,10 @@ type SendMailInput = {
   html: string;
 };
 
+export function isResendConfigured(): boolean {
+  return Boolean(process.env.RESEND_API_KEY?.trim());
+}
+
 function getFromAddress(): string {
   return (
     process.env.RESEND_FROM_EMAIL?.trim() ||

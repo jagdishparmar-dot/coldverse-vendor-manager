@@ -47,11 +47,12 @@ export async function requirePortalSession(token: string) {
     throw new ServiceError(401, "OTP Verification Required", { otpRequired: true });
   }
 
-  const vendor = await prisma.vendor.findUnique({
-    where: { token: token.trim() },
+  const vendor = await prisma.vendor.findFirst({
+    where: { token: token.trim(), archived: false },
   });
-  if (!vendor || vendor.archived) {
-    throw new ServiceError(404, "Invalid vendor portal link.");
+  if (!vendor) {
+    await prisma.portalSession.delete({ where: { token: token.trim() } }).catch(() => undefined);
+    throw new ServiceError(401, "OTP Verification Required", { otpRequired: true });
   }
 
   return { session, vendor };

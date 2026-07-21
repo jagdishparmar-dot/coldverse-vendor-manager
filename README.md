@@ -94,6 +94,8 @@ The admin console requires email/password login via [better-auth](https://www.be
 
 Transactional emails (invoice upload, vendor registration, KYC verified, invoice status change) are sent via [Resend](https://resend.com) when `RESEND_API_KEY` is set and the matching toggle is enabled on Settings → Workspace.
 
+Vendor portal OTP is also emailed to the vendor’s registered address (in parallel with SMS) when Resend is configured — useful when SMS delivery fails.
+
 After running `npm run db:seed`, sign in with the credentials from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in your `.env` (default dev: `admin@shreemaruti.com` / `ChangeMe123!`). Change the password after first login.
 
 From the repository root, you can also run:

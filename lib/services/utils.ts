@@ -18,6 +18,16 @@ export function maskPhone(phone: string): string {
   return prefix + last4;
 }
 
+export function maskEmail(email: string): string {
+  const trimmed = email.trim();
+  const at = trimmed.indexOf("@");
+  if (at <= 0) return "***@***";
+  const local = trimmed.slice(0, at);
+  const domain = trimmed.slice(at + 1);
+  const localMasked = local.length <= 2 ? `${local[0] ?? "*"}*` : `${local.slice(0, 2)}***`;
+  return `${localMasked}@${domain}`;
+}
+
 export class ServiceError extends Error {
   status: number;
   details?: Record<string, unknown>;

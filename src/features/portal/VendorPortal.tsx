@@ -52,8 +52,10 @@ export default function VendorPortal({ token }: VendorPortalProps) {
   const [portalCheckedVendor, setPortalCheckedVendor] = useState<{
     name: string;
     maskedPhone: string;
+    maskedEmail?: string;
   } | null>(null);
   const [otpRequested, setOtpRequested] = useState(false);
+  const [otpDeliveryMessage, setOtpDeliveryMessage] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpPhone, setOtpPhone] = useState("");
   const [otpError, setOtpError] = useState("");
@@ -106,23 +108,28 @@ export default function VendorPortal({ token }: VendorPortalProps) {
     setPortalLoading(true);
     setPortalError("");
     try {
+      const checkRes = await fetch(
+        `/api/vendors/portal-check/${encodeURIComponent(portalToken)}`
+      );
+      if (!checkRes.ok) {
+        throw new Error("Invalid or inactive vendor portal link.");
+      }
+
+      const checkData = await checkRes.json();
+      setPortalCheckedVendor({
+        name: checkData.name,
+        maskedPhone: checkData.maskedPhone,
+        maskedEmail: checkData.maskedEmail,
+      });
+
       const response = await fetch(`/api/vendors/token/${encodeURIComponent(portalToken)}`);
+      if (response.status === 401) {
+        setIsOtpVerified(false);
+        setPortalLoading(false);
+        return;
+      }
 
       if (!response.ok) {
-        if (response.status === 401) {
-          // OTP verification required
-          const checkRes = await fetch(`/api/vendors/portal-check/${encodeURIComponent(portalToken)}`);
-          if (checkRes.ok) {
-            const checkData = await checkRes.json();
-            setPortalCheckedVendor({
-              name: checkData.name,
-              maskedPhone: checkData.maskedPhone,
-            });
-            setIsOtpVerified(false);
-            setPortalLoading(false);
-            return;
-          }
-        }
         throw new Error("Invalid or inactive vendor portal link.");
       }
 
@@ -171,6 +178,11 @@ export default function VendorPortal({ token }: VendorPortalProps) {
       }
 
       setOtpRequested(true);
+      setOtpDeliveryMessage(
+        typeof data.message === "string"
+          ? data.message
+          : "Verification code sent to your registered mobile number."
+      );
       setResendCooldown(OTP_RESEND_COOLDOWN_SEC);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Could not send the code. Please try again.";
@@ -650,8 +662,12 @@ export default function VendorPortal({ token }: VendorPortalProps) {
               <p className="text-sm text-slate-500 mt-2 leading-relaxed">
                 {otpRequested ? (
                   <>
-                    We sent a 6-digit code to{" "}
-                    <span className="font-semibold text-slate-700">+91 {otpPhone}</span>
+                    {otpDeliveryMessage || (
+                      <>
+                        We sent a 6-digit code to{" "}
+                        <span className="font-semibold text-slate-700">+91 {otpPhone}</span>
+                      </>
+                    )}
                   </>
                 ) : (
                   <>
@@ -698,6 +714,15 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                   <p className="text-[11px] text-slate-400 mt-1.5">
                     Should end with{" "}
                     <span className="font-semibold text-slate-500">{portalCheckedVendor.maskedPhone}</span>
+                    {portalCheckedVendor.maskedEmail ? (
+                      <>
+                        {" "}
+                        · OTP is also sent to{" "}
+                        <span className="font-semibold text-slate-500">
+                          {portalCheckedVendor.maskedEmail}
+                        </span>
+                      </>
+                    ) : null}
                   </p>
                 </div>
 

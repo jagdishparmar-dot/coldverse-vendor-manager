@@ -103,6 +103,27 @@ export function vendorKycVerifiedEmail(input: {
   return { subject, html };
 }
 
+export function vendorPortalOtpEmail(input: {
+  vendorName: string;
+  otp: string;
+  validMinutes: number;
+}): { subject: string; html: string } {
+  const subject = "Your vendor portal sign-in code";
+  const html = layout(
+    "Sign-in verification code",
+    `<p style="margin:0 0 16px;font-size:14px;line-height:1.55;color:#334155;">
+      Hello ${input.vendorName}, use this one-time code to sign in to the ${COMPANY_SHORT_NAME} vendor billing portal:
+    </p>
+    <p style="margin:0 0 16px;font-size:28px;font-weight:800;letter-spacing:0.28em;color:#0f172a;font-family:Consolas,Monaco,monospace;">
+      ${input.otp}
+    </p>
+    <p style="margin:0;font-size:13px;line-height:1.55;color:#64748b;">
+      This code expires in ${input.validMinutes} minutes. If you did not request it, you can ignore this email.
+    </p>`
+  );
+  return { subject, html };
+}
+
 export function vendorInvoiceStatusChangedEmail(input: {
   vendorName: string;
   invoiceNumber: string;

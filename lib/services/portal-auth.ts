@@ -8,9 +8,19 @@ import {
   safeEqualString,
 } from "@/lib/auth-guards";
 import { prisma } from "@/lib/db";
+import { isResendConfigured, sendMail } from "@/lib/email/resend";
+import { vendorPortalOtpEmail } from "@/lib/email/templates";
+import { sendOtpSms, isSmsConfigured } from "@/lib/sms";
 import { getPortalPayload } from "@/lib/services/invoices";
 import { findVendorByToken } from "@/lib/services/vendors";
-import { maskPhone, normalizePhone, ServiceError } from "@/lib/services/utils";
+import {
+  maskEmail,
+  maskPhone,
+  normalizePhone,
+  ServiceError,
+} from "@/lib/services/utils";
+
+const PORTAL_OTP_VALID_MINUTES = 5;
 
 const OTP_FAIL_KEY = (token: string) => `otp-fail:${token}`;
 const OTP_SEND_KEY = (token: string, ip: string) => `otp-send:${token}:${ip}`;
@@ -24,12 +34,38 @@ export async function portalCheck(token: string) {
     );
   }
 
-  // Do not expose full phone — masked only
+  const vendorEmail = vendor.email?.trim();
+
+  // Do not expose full phone or email — masked only
   return {
     success: true,
     name: vendor.name,
     maskedPhone: maskPhone(vendor.phone),
+    maskedEmail: vendorEmail ? maskEmail(vendorEmail) : undefined,
   };
+}
+
+function buildOtpDeliveryMessage(input: {
+  smsSent: boolean;
+  emailSent: boolean;
+  maskedEmail?: string;
+}): string {
+  if (input.smsSent && input.emailSent && input.maskedEmail) {
+    return `Verification code sent to your registered mobile number and email (${input.maskedEmail}).`;
+  }
+  if (input.emailSent && input.maskedEmail) {
+    return `Verification code sent to your registered email (${input.maskedEmail}).`;
+  }
+  return "Verification code sent to your registered mobile number.";
+}
+
+async function sendPortalOtpEmail(vendorName: string, email: string, otp: string): Promise<void> {
+  const { subject, html } = vendorPortalOtpEmail({
+    vendorName,
+    otp,
+    validMinutes: PORTAL_OTP_VALID_MINUTES,
+  });
+  await sendMail({ to: email, subject, html });
 }
 
 export async function sendPortalOtp(token: string, phone: string) {
@@ -62,7 +98,9 @@ export async function sendPortalOtp(token: string, phone: string) {
   }
 
   const generatedOtp = generateNumericOtp(6);
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + PORTAL_OTP_VALID_MINUTES * 60 * 1000);
+  const vendorEmail = vendor.email?.trim();
+  const canSendEmail = Boolean(vendorEmail && isResendConfigured());
 
   await prisma.portalOtp.upsert({
     where: { token },
@@ -79,23 +117,64 @@ export async function sendPortalOtp(token: string, phone: string) {
     },
   });
 
-  // Never log plaintext OTP. Wire SMS/email provider here.
-  console.log(
-    `[OTP Portal Service] OTP issued for vendor ${vendor.id} (expires ${expiresAt.toISOString()})`
-  );
+  const canSendSms = isSmsConfigured();
 
-  // Dev-only convenience: expose OTP when explicitly enabled
-  if (process.env.PORTAL_OTP_DEV_ECHO === "true") {
-    return {
-      success: true,
-      message: "OTP sent to registered mobile number.",
-      devOtp: generatedOtp,
-    };
+  if (!canSendSms && !canSendEmail) {
+    await prisma.portalOtp.delete({ where: { token } }).catch(() => undefined);
+    throw new ServiceError(
+      503,
+      "Verification delivery is not configured. Please contact administrator."
+    );
   }
+
+  let smsSent = false;
+  let emailSent = false;
+
+  if (canSendSms) {
+    try {
+      const sms = await sendOtpSms(normInput, generatedOtp);
+      if (sms.ok) {
+        smsSent = true;
+        console.log(
+          `[OTP Portal Service] SMS sent via ${sms.provider} for vendor ${vendor.id} (txn ${sms.transactionId ?? "n/a"})`
+        );
+      } else {
+        console.error(
+          `[OTP Portal Service] SMS rejected for vendor ${vendor.id}: ${sms.description ?? "unknown error"}`
+        );
+      }
+    } catch (err) {
+      console.error("[OTP Portal Service] SMS send failed:", err);
+    }
+  }
+
+  if (canSendEmail && vendorEmail) {
+    try {
+      await sendPortalOtpEmail(vendor.name, vendorEmail, generatedOtp);
+      emailSent = true;
+      console.log(`[OTP Portal Service] OTP email sent for vendor ${vendor.id}`);
+    } catch (err) {
+      console.error("[OTP Portal Service] OTP email send failed:", err);
+    }
+  }
+
+  if (!smsSent && !emailSent) {
+    await prisma.portalOtp.delete({ where: { token } }).catch(() => undefined);
+    throw new ServiceError(
+      502,
+      "Could not send verification code. Please try again later."
+    );
+  }
+
+  const maskedEmail = vendorEmail ? maskEmail(vendorEmail) : undefined;
+  const message = buildOtpDeliveryMessage({ smsSent, emailSent, maskedEmail });
 
   return {
     success: true,
-    message: "OTP sent to registered mobile number.",
+    message,
+    smsSent,
+    emailSent,
+    maskedEmail,
   };
 }
 
