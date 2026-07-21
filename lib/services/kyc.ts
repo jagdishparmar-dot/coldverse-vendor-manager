@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/auth-guards";
 import { prisma } from "@/lib/db";
 import { vendorToApi } from "@/lib/mappers";
 import type { KYCDetails } from "@/src/types";
@@ -273,6 +274,8 @@ export async function getKycDocument(
     if (!sessionVendor || sessionVendor.id !== vendorId) {
       throw new ServiceError(403, "Not authorized to view this KYC document.");
     }
+  } else {
+    await requireAdmin();
   }
 
   const vendor = await prisma.vendor.findUnique({ where: { id: vendorId } });

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { handleServiceError } from "@/lib/api-utils";
+import { requireAdmin } from "@/lib/auth-guards";
 import { parsePageLimit } from "@/lib/pagination";
 import { listInvoicesPaginated } from "@/lib/services/invoices";
 
 export async function GET(request: Request) {
   try {
+    await requireAdmin();
     const { searchParams } = new URL(request.url);
     const { page, limit } = parsePageLimit(searchParams);
 

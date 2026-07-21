@@ -14,7 +14,13 @@ export const auth = betterAuth({
     enabled: true,
     disableSignUp: true,
   },
-  plugins: [admin(), nextCookies()],
+  plugins: [
+    admin({
+      defaultRole: "user",
+      adminRoles: ["admin"],
+    }),
+    nextCookies(),
+  ],
 });
 
 export type Session = typeof auth.$Infer.Session;

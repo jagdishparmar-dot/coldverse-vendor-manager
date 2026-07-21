@@ -10,6 +10,7 @@ import {
 
 export async function GET(request: Request) {
   try {
+    await requireAdmin();
     const { searchParams } = new URL(request.url);
 
     if (searchParams.get("options") === "1") {

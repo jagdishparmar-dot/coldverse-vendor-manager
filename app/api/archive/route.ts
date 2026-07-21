@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { handleServiceError } from "@/lib/api-utils";
+import { requireAdmin } from "@/lib/auth-guards";
 import { parsePageLimit } from "@/lib/pagination";
 import { listArchivedPaginated } from "@/lib/services/archive";
 
 export async function GET(request: Request) {
   try {
+    await requireAdmin();
     const { searchParams } = new URL(request.url);
     const typeParam = searchParams.get("type");
     const type =

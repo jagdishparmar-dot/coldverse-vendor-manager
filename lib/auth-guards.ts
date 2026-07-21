@@ -68,6 +68,9 @@ export async function requireAdminOrInvoicePortalAccess(options: {
 }) {
   const session = await getSessionOrNull();
   if (session) {
+    if (session.user.role !== "admin") {
+      throw new ServiceError(403, "Admin access required.");
+    }
     return { kind: "admin" as const, session };
   }
 

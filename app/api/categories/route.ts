@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { handleServiceError } from "@/lib/api-utils";
+import { requireAdmin } from "@/lib/auth-guards";
 import { addCategory, listCategories } from "@/lib/services/categories";
 
 export async function GET() {
   try {
+    await requireAdmin();
     const categories = await listCategories();
     return NextResponse.json(categories);
   } catch (error) {
@@ -13,6 +15,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    await requireAdmin();
     const body = await request.json();
     const result = await addCategory(body.name);
     return NextResponse.json(result, { status: 201 });
