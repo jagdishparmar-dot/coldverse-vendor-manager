@@ -11,6 +11,7 @@ import {
   X,
   Loader2,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Vendor, Invoice, Hub, CompanyProfile } from "@/src/types";
 import PortalKycGate from "@/src/components/PortalKycGate";
 import PortalInvoiceGenerator from "@/src/components/PortalInvoiceGenerator";
@@ -19,6 +20,7 @@ import { COMPANY_LEGAL_NAME } from "@/src/constants/brand";
 import { ColdverseSelect } from "@/src/components/coldverse-select";
 import { ColdverseDateField } from "@/src/components/coldverse-date-field";
 import PortalUploadHistory from "@/src/features/portal/PortalUploadHistory";
+import PortalLanguageSwitcher from "@/src/features/portal/PortalLanguageSwitcher";
 import InvoiceAttachmentPrintModal from "@/src/features/admin/components/InvoiceAttachmentPrintModal";
 import { formatCurrency } from "@/src/features/admin/utils";
 import { Input } from "@/components/ui/input";
@@ -37,6 +39,12 @@ type VendorPortalProps = {
 };
 
 export default function VendorPortal({ token }: VendorPortalProps) {
+  const t = useTranslations("common");
+  const tError = useTranslations("error");
+  const tOtp = useTranslations("otp");
+  const tUpload = useTranslations("upload");
+  const tEdit = useTranslations("edit");
+
   const [allCategories, setAllCategories] = useState<string[]>(ALL_CATEGORIES);
 
   // Portal States
@@ -174,18 +182,18 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Could not send the code. Please try again.");
+        throw new Error(data.error || tOtp("error.sendFailed"));
       }
 
       setOtpRequested(true);
       setOtpDeliveryMessage(
         typeof data.message === "string"
           ? data.message
-          : "Verification code sent to your registered mobile number."
+          : tOtp("sentFallback")
       );
       setResendCooldown(OTP_RESEND_COOLDOWN_SEC);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Could not send the code. Please try again.";
+      const message = err instanceof Error ? err.message : tOtp("error.sendFailed");
       setOtpError(message);
     } finally {
       setIsRequestingOtp(false);
@@ -207,7 +215,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "That code looks wrong. Please check and try again.");
+        throw new Error(data.error || tOtp("error.wrongCode"));
       }
 
       // Successful login
@@ -228,7 +236,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
       setIsOtpVerified(true);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Could not verify the code. Please try again.";
+      const message = err instanceof Error ? err.message : tOtp("error.verifyFailed");
       setOtpError(message);
     } finally {
       setIsVerifyingOtp(false);
@@ -269,7 +277,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
   const handleVendorFile = (file: File) => {
     setPUploadError("");
     if (file.size > 10 * 1024 * 1024) {
-      setPUploadError("File size exceeds 10MB limit.");
+      setPUploadError(tUpload("error.fileTooLarge"));
       return;
     }
 
@@ -280,7 +288,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
       setPBase64File(base64);
     };
     reader.onerror = () => {
-      setPUploadError("Failed to read file.");
+      setPUploadError(tUpload("error.fileRead"));
     };
     reader.readAsDataURL(file);
   };
@@ -308,7 +316,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
     if (!currentVendor) return;
 
     if (!pCategory || !pInvoiceNo.trim() || !pAmount.trim() || !pDate || !pBase64File) {
-      setPUploadError("Please fill out all invoice fields and select a file.");
+      setPUploadError(tUpload("error.requiredFields"));
       return;
     }
 
@@ -320,7 +328,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
     const availableStates = vendorStates.length > 0 ? vendorStates : allStatesFromHubs;
 
     if (availableStates.length > 0 && !pState) {
-      setPUploadError("Please select the operating State for this invoice.");
+      setPUploadError(tUpload("error.selectState"));
       return;
     }
 
@@ -328,13 +336,13 @@ export default function VendorPortal({ token }: VendorPortalProps) {
     const hubsForSelection = currentVendor.hubs && currentVendor.hubs.length > 0 ? assignedHubs : portalHubs;
     const filteredHubs = pState ? hubsForSelection.filter(h => h.state === pState) : hubsForSelection;
     if (filteredHubs.length > 0 && !pHubId) {
-      setPUploadError("Please select the regional Logistics Hub for this invoice.");
+      setPUploadError(tUpload("error.selectHub"));
       return;
     }
 
     const amt = parseFloat(pAmount);
     if (isNaN(amt) || amt <= 0) {
-      setPUploadError("Please provide a valid billing amount.");
+      setPUploadError(tUpload("error.invalidAmount"));
       return;
     }
 
@@ -367,10 +375,10 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.error || "Failed to submit invoice to admin portal.");
+        throw new Error(err.error || tUpload("error.submitFailed"));
       }
 
-      setPSuccessMsg("Invoice uploaded successfully! Thank you.");
+      setPSuccessMsg(tUpload("successUploaded"));
 
       // Reset Form fields
       setPInvoiceNo("");
@@ -387,7 +395,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
       // Reload History for Vendor
       fetchPortalData(token);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to complete upload.";
+      const message = err instanceof Error ? err.message : tUpload("error.uploadFailed");
       setPUploadError(message);
     } finally {
       setIsUploading(false);
@@ -409,7 +417,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
   const handleEditFile = (file: File) => {
     if (file.size > 10 * 1024 * 1024) {
-      setEditError("File size exceeds 10MB limit.");
+      setEditError(tEdit("error.fileTooLarge"));
       return;
     }
     setEditSelectedFile(file);
@@ -427,7 +435,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
     if (!editingInvoice || !currentVendor) return;
 
     if (!editCategory || !editInvoiceNo.trim() || !editAmount.trim() || !editDate) {
-      setEditError("Please fill out all invoice fields.");
+      setEditError(tEdit("error.requiredFields"));
       return;
     }
 
@@ -436,20 +444,20 @@ export default function VendorPortal({ token }: VendorPortalProps) {
       : (currentVendor.state ? currentVendor.state.split(",").map(s => s.trim()).filter(s => s.length > 0) : []);
 
     if (vendorStates.length > 0 && !editState) {
-      setEditError("Please select the operating State for this invoice.");
+      setEditError(tEdit("error.selectState"));
       return;
     }
 
     const assignedHubs = portalHubs.filter(h => currentVendor.hubs?.includes(h.id));
     const filteredHubs = editState ? assignedHubs.filter(h => h.state === editState) : assignedHubs;
     if (filteredHubs.length > 0 && !editHubId) {
-      setEditError("Please select the regional Logistics Hub for this invoice.");
+      setEditError(tEdit("error.selectHub"));
       return;
     }
 
     const amt = parseFloat(editAmount);
     if (isNaN(amt) || amt <= 0) {
-      setEditError("Please provide a valid billing amount.");
+      setEditError(tEdit("error.invalidAmount"));
       return;
     }
 
@@ -477,13 +485,13 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.error || "Failed to update invoice.");
+        throw new Error(err.error || tEdit("error.updateFailed"));
       }
 
       setEditingInvoice(null);
       fetchPortalData(token);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to update invoice.";
+      const message = err instanceof Error ? err.message : tEdit("error.updateFailed");
       setEditError(message);
     } finally {
       setIsUpdatingInvoice(false);
@@ -522,12 +530,15 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
   if (portalLoading) {
     return (
-      <div className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center p-4">
+      <div className="relative min-h-screen bg-gray-50/50 flex flex-col items-center justify-center p-4">
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+          <PortalLanguageSwitcher />
+        </div>
         <div className="flex justify-center mb-8">
           <SmileLogo />
         </div>
         <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
-        <p className="text-sm text-slate-500 mt-4">Opening your billing page...</p>
+        <p className="text-sm text-slate-500 mt-4">{t("loading")}</p>
       </div>
     );
   }
@@ -536,6 +547,9 @@ export default function VendorPortal({ token }: VendorPortalProps) {
     return (
       <div className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md">
+          <div className="flex justify-end mb-4">
+            <PortalLanguageSwitcher size="auth" />
+          </div>
           <div className="flex justify-center mb-8">
             <SmileLogo />
           </div>
@@ -544,11 +558,10 @@ export default function VendorPortal({ token }: VendorPortalProps) {
               <AlertCircle className="w-7 h-7 stroke-[1.5]" />
             </div>
             <h1 className="text-xl font-black text-slate-800 uppercase tracking-wider">
-              Link not working
+              {tError("linkNotWorking")}
             </h1>
             <p className="text-sm text-slate-500 mt-2 leading-relaxed">
-              This invoice upload link is invalid or no longer active. Please ask your Shree Maruti
-              accounts contact for a fresh link.
+              {tError("invalidLink")}
             </p>
           </div>
           <p className="text-center text-[11px] text-slate-400 mt-6">{COMPANY_LEGAL_NAME}</p>
@@ -565,6 +578,9 @@ export default function VendorPortal({ token }: VendorPortalProps) {
     return (
       <div className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md">
+          <div className="flex justify-end mb-4">
+            <PortalLanguageSwitcher size="auth" />
+          </div>
           <div className="flex justify-center mb-8">
             <SmileLogo />
           </div>
@@ -572,23 +588,20 @@ export default function VendorPortal({ token }: VendorPortalProps) {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-8">
             <div className="mb-6 text-center">
               <h1 className="text-xl font-black text-slate-800 uppercase tracking-wider">
-                {otpRequested ? "Enter verification code" : "Vendor sign in"}
+                {otpRequested ? tOtp("enterCodeTitle") : tOtp("signInTitle")}
               </h1>
               <p className="text-sm text-slate-500 mt-2 leading-relaxed">
                 {otpRequested ? (
                   <>
                     {otpDeliveryMessage || (
                       <>
-                        We sent a 6-digit code to{" "}
+                        {tOtp("sentCodeTo")}{" "}
                         <span className="font-semibold text-slate-700">+91 {otpPhone}</span>
                       </>
                     )}
                   </>
                 ) : (
-                  <>
-                    Hi <span className="font-semibold text-slate-700">{portalCheckedVendor.name}</span>
-                    . Enter your registered mobile to upload invoices.
-                  </>
+                  tOtp("greeting", { name: portalCheckedVendor.name })
                 )}
               </p>
             </div>
@@ -607,7 +620,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                     htmlFor="portal-mobile"
                     className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5"
                   >
-                    Mobile number
+                    {tOtp("mobileNumber")}
                   </label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-sm font-semibold">
@@ -620,19 +633,19 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                       autoComplete="tel"
                       required
                       maxLength={10}
-                      placeholder="10-digit mobile number"
+                      placeholder={tOtp("mobilePlaceholder")}
                       value={otpPhone}
                       onChange={(e) => setOtpPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                       className="h-10 rounded-xl border-gray-200 pl-12 font-mono tracking-wide focus-visible:border-violet-300 focus-visible:ring-violet-100"
                     />
                   </div>
                   <p className="text-[11px] text-slate-400 mt-1.5">
-                    Should end with{" "}
+                    {tOtp("shouldEndWith")}{" "}
                     <span className="font-semibold text-slate-500">{portalCheckedVendor.maskedPhone}</span>
                     {portalCheckedVendor.maskedEmail ? (
                       <>
                         {" "}
-                        · OTP is also sent to{" "}
+                        · {tOtp("otpAlsoSentTo")}{" "}
                         <span className="font-semibold text-slate-500">
                           {portalCheckedVendor.maskedEmail}
                         </span>
@@ -649,10 +662,10 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                   {isRequestingOtp ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Sending code...
+                      {tOtp("sendingCode")}
                     </>
                   ) : (
-                    "Send code"
+                    tOtp("sendCode")
                   )}
                 </button>
               </form>
@@ -660,7 +673,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
               <form onSubmit={handleVerifyOtp} className="space-y-5">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-3 text-center">
-                    6-digit code
+                    {tOtp("sixDigitCode")}
                   </label>
                   <InputOTP
                     maxLength={6}
@@ -694,9 +707,9 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                     {isRequestingOtp ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : resendCooldown > 0 ? (
-                      `Resend in ${resendCooldown}s`
+                      tOtp("resendIn", { seconds: resendCooldown })
                     ) : (
-                      "Resend"
+                      tOtp("resend")
                     )}
                   </button>
                   <button
@@ -707,10 +720,10 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                     {isVerifyingOtp ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Verifying...
+                        {tOtp("verifying")}
                       </>
                     ) : (
-                      "Continue"
+                      tOtp("continue")
                     )}
                   </button>
                 </div>
@@ -725,7 +738,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                   }}
                   className="w-full text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
                 >
-                  Use a different mobile number
+                  {tOtp("useDifferentMobile")}
                 </button>
               </form>
             )}
@@ -741,12 +754,15 @@ export default function VendorPortal({ token }: VendorPortalProps) {
 
   if (!currentVendor) {
     return (
-      <div className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center p-4">
+      <div className="relative min-h-screen bg-gray-50/50 flex flex-col items-center justify-center p-4">
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+          <PortalLanguageSwitcher />
+        </div>
         <div className="flex justify-center mb-8">
           <SmileLogo />
         </div>
         <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
-        <p className="text-sm text-slate-500 mt-4">Loading your invoices...</p>
+        <p className="text-sm text-slate-500 mt-4">{t("loadingInvoices")}</p>
       </div>
     );
   }
@@ -765,19 +781,20 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                   Shree Maruti Integrated Logistics Limited
                 </h1>
                 <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">
-                  Secure Billing Portal
+                  {t("secureBillingPortal")}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
+              <PortalLanguageSwitcher />
               <div className="flex items-center gap-2">
                 <span className="flex h-2 w-2 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest hidden xs:inline sm:inline">
-                  Authorized
+                  {t("authorized")}
                 </span>
               </div>
               <button
@@ -785,10 +802,10 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                 onClick={handlePortalLogout}
                 disabled={isLoggingOut}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Log out"
+                title={t("logOut")}
               >
                 <LogOut className="w-3.5 h-3.5" />
-                {isLoggingOut ? "Signing out…" : "Log out"}
+                {isLoggingOut ? t("signingOut") : t("logOut")}
               </button>
             </div>
           </div>
@@ -800,22 +817,22 @@ export default function VendorPortal({ token }: VendorPortalProps) {
           <div className="bg-blue-950 rounded-2xl border border-blue-900 p-6 md:p-8 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-white">
             <div className="space-y-1">
               <span className="text-[10px] font-black text-blue-200 uppercase tracking-widest bg-blue-900/50 border border-blue-800 px-3 py-1 rounded-full shadow-sm">
-                Secure Vendor Billing Portal
+                {t("secureVendorBillingPortal")}
               </span>
               <h1 className="text-2xl font-display font-extrabold text-white mt-1.5">{currentVendor.name}</h1>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-blue-200 mt-2">
-                <span>Email: <strong className="font-bold text-white">{currentVendor.email}</strong></span>
+                <span>{t("email")}: <strong className="font-bold text-white">{currentVendor.email}</strong></span>
                 {currentVendor.phone && (
                   <>
                     <span className="text-blue-500 font-bold">•</span>
-                    <span>Phone: <strong className="font-bold text-white">{currentVendor.phone}</strong></span>
+                    <span>{t("phone")}: <strong className="font-bold text-white">{currentVendor.phone}</strong></span>
                   </>
                 )}
               </div>
             </div>
 
             <div className="text-left md:text-right text-xs text-blue-200 font-medium">
-              Authorized categories:
+              {t("authorizedCategories")}
               <div className="flex flex-wrap gap-1 mt-1.5 justify-start md:justify-end">
                 {currentVendor.categories.map((c) => (
                   <span key={c} className="bg-white/10 text-white border border-white/10 font-bold px-2.5 py-1 rounded-lg text-[10px] shadow-sm hover:bg-white/20 transition-all">
@@ -848,15 +865,15 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
-                            Option 1
+                            {tUpload("option1Badge")}
                           </span>
                           <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
                             <FileText className="w-4 h-4 text-orange-600" />
-                            Create invoice here
+                            {tUpload("createHereTitle")}
                           </p>
                         </div>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          Generate a GST tax invoice PDF with templates, then submit it from the portal.
+                          {tUpload("createHereHint")}
                         </p>
                       </div>
                       <button
@@ -868,7 +885,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                         }}
                         className="shrink-0 px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl bg-orange-600 text-white hover:bg-orange-700 shadow-sm cursor-pointer"
                       >
-                        Open invoice creator
+                        {tUpload("openCreator")}
                       </button>
                     </div>
                   ) : (
@@ -876,10 +893,10 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="text-lg font-display font-semibold text-gray-900">
-                            Invoice creator
+                            {tUpload("creatorTitle")}
                           </p>
                           <p className="text-xs text-gray-500 mt-0.5">
-                            Build your tax invoice PDF, then return to upload if you already have a file.
+                            {tUpload("creatorHint")}
                           </p>
                         </div>
                         <button
@@ -890,7 +907,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                           }}
                           className="text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer shrink-0"
                         >
-                          ← Back to upload
+                          {tUpload("backToUpload")}
                         </button>
                       </div>
                       <PortalInvoiceGenerator
@@ -924,16 +941,16 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                   <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
-                        Option 2
+                        {tUpload("option2Badge")}
                       </span>
-                      <h2 className="text-lg font-display font-semibold text-gray-900">Submit Invoice</h2>
+                      <h2 className="text-lg font-display font-semibold text-gray-900">{tUpload("submitTitle")}</h2>
                     </div>
                     <span className="text-[10px] bg-violet-100 text-violet-700 font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
-                      Online
+                      {tUpload("onlineBadge")}
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 mb-6">
-                    Already have a tax invoice file? Upload it below with category, hub, and amount details.
+                    {tUpload("submitHint")}
                   </p>
 
                   {pSuccessMsg && (
@@ -941,7 +958,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                       <div className="flex items-start gap-3">
                         <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-semibold text-sm">Action Completed Successfully!</p>
+                          <p className="font-semibold text-sm">{tUpload("successTitle")}</p>
                           <p className="text-xs text-emerald-700 mt-0.5">
                             {pSuccessMsg}
                           </p>
@@ -951,7 +968,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                         onClick={() => setPSuccessMsg(null)}
                         className="text-xs font-semibold text-emerald-800 hover:underline flex items-center gap-1"
                       >
-                        Upload another invoice →
+                        {tUpload("uploadAnother")}
                       </button>
                     </div>
                   )}
@@ -960,7 +977,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                       {/* Category Picker */}
                       <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                          Select Account Category <span className="text-red-500">*</span>
+                          {tUpload("category")} <span className="text-red-500">*</span>
                         </label>
                         <ColdverseSelect
                           value={pCategory}
@@ -988,7 +1005,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                               <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                Operating State <span className="text-red-500">*</span>
+                                {tUpload("state")} <span className="text-red-500">*</span>
                               </label>
                               <ColdverseSelect
                                 value={pState}
@@ -996,14 +1013,14 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                                   setPState(val);
                                   setPHubId("");
                                 }}
-                                placeholder="-- Select State --"
+                                placeholder={tUpload("selectState")}
                                 options={availableStates.map((st) => ({ value: st, label: st }))}
                               />
                             </div>
 
                             <div className="space-y-1.5">
                               <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                Transit Hub <span className="text-red-500">*</span>
+                                {tUpload("hub")} <span className="text-red-500">*</span>
                               </label>
                               <ColdverseSelect
                                 value={pHubId}
@@ -1011,10 +1028,10 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                                 disabled={!pState}
                                 placeholder={
                                   !pState
-                                    ? "Select state first..."
+                                    ? tUpload("selectStateFirst")
                                     : filteredHubs.length === 0
-                                      ? "No assigned hubs in this state"
-                                      : "-- Select Hub --"
+                                      ? tUpload("noHubsInState")
+                                      : tUpload("selectHub")
                                 }
                                 options={filteredHubs.map((hub) => ({
                                   value: hub.id,
@@ -1030,12 +1047,12 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                         {/* Invoice Number */}
                         <div className="space-y-1.5">
                           <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                            Invoice / Bill Number <span className="text-red-500">*</span>
+                            {tUpload("invoiceNumber")} <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
                             required
-                            placeholder="e.g. INV/2026/07-12"
+                            placeholder={tUpload("invoiceNumberPlaceholder")}
                             value={pInvoiceNo}
                             onChange={(e) => setPInvoiceNo(e.target.value)}
                             className="w-full text-sm px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
@@ -1045,12 +1062,12 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                         {/* Invoice Date */}
                         <div className="space-y-1.5">
                           <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                            Invoice Date <span className="text-red-500">*</span>
+                            {tUpload("invoiceDate")} <span className="text-red-500">*</span>
                           </label>
                           <ColdverseDateField
                             value={pDate}
                             onValueChange={setPDate}
-                            placeholder="Select invoice date"
+                            placeholder={tUpload("selectInvoiceDate")}
                           />
                         </div>
                       </div>
@@ -1059,7 +1076,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                         {/* Billing Amount */}
                         <div className="space-y-1.5">
                           <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                            Invoice Gross Amount (INR) <span className="text-red-500">*</span>
+                            {tUpload("amount")} <span className="text-red-500">*</span>
                           </label>
                           <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 font-semibold text-sm">
@@ -1069,7 +1086,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                               type="number"
                               required
                               min="1"
-                              placeholder="e.g. 75000"
+                              placeholder={tUpload("amountPlaceholder")}
                               value={pAmount}
                               onChange={(e) => setPAmount(e.target.value)}
                               className="w-full text-sm pl-8 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
@@ -1080,11 +1097,11 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                         {/* Remarks / Details */}
                         <div className="space-y-1.5">
                           <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                            Remarks / Details (Optional)
+                            {tUpload("remarks")}
                           </label>
                           <input
                             type="text"
-                            placeholder="e.g. June services, special discounts..."
+                            placeholder={tUpload("remarksPlaceholder")}
                             value={pRemarks}
                             onChange={(e) => setPRemarks(e.target.value)}
                             className="w-full text-sm px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
@@ -1095,7 +1112,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                       {/* File Upload Box */}
                       <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                          Attach Digital Invoice (PDF, JPG, PNG) <span className="text-red-500">*</span>
+                          {tUpload("attachFile")} <span className="text-red-500">*</span>
                         </label>
                         <div
                           onDragOver={handleDragOver}
@@ -1122,12 +1139,14 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                             <Upload className="w-5 h-5" />
                           </div>
                           <p className="text-xs font-medium text-gray-900">
-                            {pSelectedFile ? pSelectedFile.name : "Drag & drop your invoice file here"}
+                            {pSelectedFile ? pSelectedFile.name : tUpload("dragDrop")}
                           </p>
                           <p className="text-[11px] text-gray-400 mt-1">
                             {pSelectedFile
-                              ? `Size: ${(pSelectedFile.size / (1024 * 1024)).toFixed(2)} MB • Click to replace`
-                              : "Supports PDF, JPEG, PNG formats (Max 10MB)"}
+                              ? tUpload("fileSizeReplace", {
+                                  size: (pSelectedFile.size / (1024 * 1024)).toFixed(2),
+                                })
+                              : tUpload("fileFormats")}
                           </p>
                         </div>
                       </div>
@@ -1135,11 +1154,11 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                           <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                            Hard Copy Submitted To (Optional)
+                            {tUpload("hardCopyTo")}
                           </label>
                           <input
                             type="text"
-                            placeholder="e.g. Finance Desk / Hub Manager"
+                            placeholder={tUpload("hardCopyToPlaceholder")}
                             value={pHardCopySubmittedTo}
                             onChange={(e) => setPHardCopySubmittedTo(e.target.value)}
                             className="w-full text-sm px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
@@ -1147,12 +1166,12 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                         </div>
                         <div className="space-y-1.5">
                           <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                            Hard Copy Submission Date
+                            {tUpload("hardCopyDate")}
                           </label>
                           <ColdverseDateField
                             value={pHardCopySubmissionDate}
                             onValueChange={setPHardCopySubmissionDate}
-                            placeholder="Optional date"
+                            placeholder={tUpload("hardCopyDatePlaceholder")}
                           />
                         </div>
                       </div>
@@ -1176,12 +1195,12 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                             </svg>
-                            Uploading invoice securely...
+                            {tUpload("uploading")}
                           </>
                         ) : (
                           <>
                             <Send className="w-4 h-4" />
-                            Upload &amp; Submit Invoice
+                            {tUpload("submitButton")}
                           </>
                         )}
                       </button>
@@ -1218,14 +1237,16 @@ export default function VendorPortal({ token }: VendorPortalProps) {
               <X className="w-5 h-5" />
             </button>
 
-            <h2 className="text-lg font-display font-bold text-gray-950 mb-1">Edit Submitted Invoice</h2>
-            <p className="text-xs text-gray-500 mb-6">Modify details for Invoice: <strong className="text-gray-700">{editingInvoice.invoiceNumber}</strong></p>
+            <h2 className="text-lg font-display font-bold text-gray-950 mb-1">{tEdit("title")}</h2>
+            <p className="text-xs text-gray-500 mb-6">
+              {tEdit("subtitle", { invoiceNumber: editingInvoice.invoiceNumber })}
+            </p>
 
             <form onSubmit={handleEditInvoiceSubmit} className="space-y-4">
               {/* Edit Category */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Select Account Category <span className="text-red-500">*</span>
+                  {tUpload("category")} <span className="text-red-500">*</span>
                 </label>
                 <ColdverseSelect
                   value={editCategory}
@@ -1250,7 +1271,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                          Operating State <span className="text-red-500">*</span>
+                          {tUpload("state")} <span className="text-red-500">*</span>
                         </label>
                         <ColdverseSelect
                           value={editState}
@@ -1258,14 +1279,14 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                             setEditState(val);
                             setEditHubId("");
                           }}
-                          placeholder="-- Select State --"
+                          placeholder={tUpload("selectState")}
                           options={vendorStates.map((st) => ({ value: st, label: st }))}
                         />
                       </div>
 
                       <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                          Transit Hub <span className="text-red-500">*</span>
+                          {tUpload("hub")} <span className="text-red-500">*</span>
                         </label>
                         <ColdverseSelect
                           value={editHubId}
@@ -1273,10 +1294,10 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                           disabled={!editState}
                           placeholder={
                             !editState
-                              ? "Select state first..."
+                              ? tUpload("selectStateFirst")
                               : filteredHubs.length === 0
-                                ? "No assigned hubs in this state"
-                                : "-- Select Hub --"
+                                ? tUpload("noHubsInState")
+                                : tUpload("selectHub")
                           }
                           options={filteredHubs.map((hub) => ({
                             value: hub.id,
@@ -1294,7 +1315,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                 {/* Edit Invoice Number */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Invoice / Bill Number <span className="text-red-500">*</span>
+                    {tUpload("invoiceNumber")} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -1308,12 +1329,12 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                 {/* Edit Invoice Date */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Invoice Date <span className="text-red-500">*</span>
+                    {tUpload("invoiceDate")} <span className="text-red-500">*</span>
                   </label>
                   <ColdverseDateField
                     value={editDate}
                     onValueChange={setEditDate}
-                    placeholder="Select invoice date"
+                    placeholder={tUpload("selectInvoiceDate")}
                   />
                 </div>
               </div>
@@ -1321,7 +1342,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
               {/* Edit Billing Amount */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Invoice Gross Amount (INR) <span className="text-red-500">*</span>
+                  {tUpload("amount")} <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 font-semibold text-sm">
@@ -1341,7 +1362,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
               {/* Edit Optional File Box */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Replace Attached Invoice (Optional)
+                  {tEdit("replaceFile")}
                 </label>
                 <input
                   type="file"
@@ -1354,7 +1375,7 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                   className="w-full text-xs text-gray-500 border border-gray-200 rounded-xl p-2 bg-gray-50/30 focus:outline-none"
                 />
                 <p className="text-[10px] text-gray-400">
-                  Current file: <span className="font-semibold text-gray-600">{editingInvoice.fileName}</span>. Only upload if you want to replace it.
+                  {tEdit("currentFile", { fileName: editingInvoice.fileName })}
                 </p>
               </div>
 
@@ -1372,14 +1393,14 @@ export default function VendorPortal({ token }: VendorPortalProps) {
                   onClick={() => setEditingInvoice(null)}
                   className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 font-semibold rounded-xl"
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={isUpdatingInvoice}
                   className="px-6 py-2 bg-violet-600 text-white text-sm font-semibold rounded-xl hover:bg-violet-700 disabled:opacity-60 shadow-sm"
                 >
-                  {isUpdatingInvoice ? "Saving changes..." : "Save Changes"}
+                  {isUpdatingInvoice ? tEdit("saving") : tEdit("save")}
                 </button>
               </div>
             </form>

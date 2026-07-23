@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   FileCheck,
@@ -8,19 +8,12 @@ import {
   ShieldCheck,
   Upload,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Vendor } from "@/src/types";
 import { ColdverseSelect } from "@/src/components/coldverse-select";
+import { COMPANY_SHORT_NAME } from "@/src/constants/brand";
 
-const COMPANY_TYPES = [
-  { value: "Private Limited Company (Pvt Ltd)", label: "Private Limited Company (Pvt Ltd)" },
-  { value: "Proprietorship", label: "Proprietorship" },
-  { value: "Partnership", label: "Partnership" },
-  { value: "LLP", label: "LLP" },
-  { value: "Public Limited Company", label: "Public Limited Company" },
-  { value: "One Person Company (OPC)", label: "One Person Company (OPC)" },
-  { value: "Trust / NGO", label: "Trust / NGO" },
-  { value: "Others", label: "Others" },
-];
+const DEFAULT_COMPANY_TYPE = "Private Limited Company (Pvt Ltd)";
 
 type DocSlot = {
   fileName: string;
@@ -50,8 +43,25 @@ export default function PortalKycGate({
   vendorToken,
   onVendorUpdated,
 }: PortalKycGateProps) {
+  const t = useTranslations("kyc");
+  const tCommon = useTranslations("common");
+
+  const companyTypes = useMemo(
+    () => [
+      { value: "Private Limited Company (Pvt Ltd)", label: t("companyType.pvtLtd") },
+      { value: "Proprietorship", label: t("companyType.proprietorship") },
+      { value: "Partnership", label: t("companyType.partnership") },
+      { value: "LLP", label: t("companyType.llp") },
+      { value: "Public Limited Company", label: t("companyType.publicLtd") },
+      { value: "One Person Company (OPC)", label: t("companyType.opc") },
+      { value: "Trust / NGO", label: t("companyType.trust") },
+      { value: "Others", label: t("companyType.others") },
+    ],
+    [t]
+  );
+
   const [beneficiaryName, setBeneficiaryName] = useState("");
-  const [companyType, setCompanyType] = useState(COMPANY_TYPES[0].value);
+  const [companyType, setCompanyType] = useState(DEFAULT_COMPANY_TYPE);
   const [panNumber, setPanNumber] = useState("");
   const [gstNumber, setGstNumber] = useState("");
   const [bankName, setBankName] = useState("");
@@ -75,7 +85,7 @@ export default function PortalKycGate({
     const details = vendor.kycDetails;
     if (details) {
       setPanNumber(details.panNumber || "");
-      setCompanyType(details.companyType || COMPANY_TYPES[0].value);
+      setCompanyType(details.companyType || DEFAULT_COMPANY_TYPE);
       setBankName(details.bankName || "");
       setAccountNumber(details.accountNumber || "");
       setIfscCode(details.ifscCode || "");
@@ -108,7 +118,7 @@ export default function PortalKycGate({
       });
     } else {
       setPanNumber("");
-      setCompanyType(COMPANY_TYPES[0].value);
+      setCompanyType(DEFAULT_COMPANY_TYPE);
       setBankName("");
       setAccountNumber("");
       setIfscCode("");
@@ -132,7 +142,7 @@ export default function PortalKycGate({
   ) => {
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      setSubmitError("File size exceeds 10MB limit.");
+      setSubmitError(t("error.fileTooLarge"));
       return;
     }
     try {
@@ -140,7 +150,7 @@ export default function PortalKycGate({
       setter({ fileName: file.name, fileType: file.type, fileData: data });
       setSubmitError("");
     } catch {
-      setSubmitError("Failed to read the selected file.");
+      setSubmitError(t("error.fileRead"));
     }
   };
 
@@ -155,11 +165,11 @@ export default function PortalKycGate({
       !beneficiaryName ||
       !address
     ) {
-      setSubmitError("Please fill in all required fields.");
+      setSubmitError(t("error.requiredFields"));
       return;
     }
     if (!mainDoc.fileData && !mainDoc.fileName) {
-      setSubmitError("Please upload a scanned copy of your KYC document.");
+      setSubmitError(t("error.mainDocRequired"));
       return;
     }
 
@@ -199,13 +209,13 @@ export default function PortalKycGate({
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Failed to submit KYC details.");
+        throw new Error(data.error || t("error.submitFailed"));
       }
       if (data.vendor) {
         onVendorUpdated(data.vendor);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "An error occurred during KYC submission.";
+      const message = err instanceof Error ? err.message : t("error.generic");
       setSubmitError(message);
     } finally {
       setIsSubmitting(false);
@@ -229,50 +239,50 @@ export default function PortalKycGate({
             <ShieldCheck className="w-8 h-8 stroke-[1.5]" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-display font-bold text-gray-950">We&apos;re checking your details</h2>
+            <h2 className="text-xl font-display font-bold text-gray-950">{t("pendingTitle")}</h2>
             <p className="text-sm text-gray-500 leading-relaxed">
-              Thanks for sharing your business documents. The Shree Maruti accounts team is reviewing them.
+              {t("pendingBody", { brand: COMPANY_SHORT_NAME })}
             </p>
-            <p className="text-xs text-slate-400">
-              First-time vendors need this approval before uploading invoices. It usually takes 2–4 working hours.
-            </p>
+            <p className="text-xs text-slate-400">{t("pendingHint")}</p>
           </div>
         </div>
 
         {details && (
           <div className="border-t border-gray-100 pt-6 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              What you submitted
+              {t("submittedHeading")}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 text-xs bg-slate-50/50 rounded-2xl p-5 border border-slate-100">
               <div>
-                <span className="text-slate-400 block font-medium">GSTIN / Registration</span>
+                <span className="text-slate-400 block font-medium">{t("label.gstin")}</span>
                 <strong className="text-slate-800 font-bold font-mono text-xs">
-                  {vendor.gstNumber || "Not Provided"}
+                  {vendor.gstNumber || t("notProvided")}
                 </strong>
               </div>
               <div>
-                <span className="text-slate-400 block font-medium">PAN Number</span>
+                <span className="text-slate-400 block font-medium">{t("label.pan")}</span>
                 <strong className="text-slate-800 font-bold font-mono text-xs">{details.panNumber}</strong>
               </div>
               <div>
-                <span className="text-slate-400 block font-medium">Business Type</span>
+                <span className="text-slate-400 block font-medium">{t("label.businessType")}</span>
                 <strong className="text-slate-800 font-bold text-xs">{details.companyType}</strong>
               </div>
               <div>
-                <span className="text-slate-400 block font-medium">Bank Details</span>
+                <span className="text-slate-400 block font-medium">{t("label.bankDetails")}</span>
                 <strong className="text-slate-800 font-bold text-xs">{details.bankName}</strong>
                 <span className="text-slate-400 block text-[10px] font-mono mt-0.5">
-                  A/C: {details.accountNumber}
+                  {t("accountPrefix", { accountNumber: details.accountNumber })}
                 </span>
-                <span className="text-slate-400 block text-[10px] font-mono">IFSC: {details.ifscCode}</span>
+                <span className="text-slate-400 block text-[10px] font-mono">
+                  {t("ifscPrefix", { ifsc: details.ifscCode })}
+                </span>
               </div>
               <div>
-                <span className="text-slate-400 block font-medium">Account holder name</span>
+                <span className="text-slate-400 block font-medium">{t("label.beneficiary")}</span>
                 <strong className="text-slate-800 font-bold text-xs">{details.beneficiaryName}</strong>
               </div>
               <div>
-                <span className="text-slate-400 block font-medium">KYC Attached Document</span>
+                <span className="text-slate-400 block font-medium">{t("label.mainDoc")}</span>
                 {details.kycDocPath ? (
                   <a
                     href={downloadUrl()}
@@ -282,15 +292,15 @@ export default function PortalKycGate({
                     className="text-blue-600 hover:underline font-bold inline-flex items-center gap-1 mt-1 cursor-pointer"
                   >
                     <FileText className="w-3.5 h-3.5" />
-                    View Document
+                    {t("viewDocument")}
                   </a>
                 ) : (
-                  <span className="text-slate-400">None</span>
+                  <span className="text-slate-400">{t("none")}</span>
                 )}
               </div>
               {details.panDocPath && (
                 <div>
-                  <span className="text-slate-400 block font-medium">PAN Card Document</span>
+                  <span className="text-slate-400 block font-medium">{t("label.panDoc")}</span>
                   <a
                     href={downloadUrl("pan")}
                     target="_blank"
@@ -299,13 +309,13 @@ export default function PortalKycGate({
                     className="text-violet-600 hover:underline font-bold inline-flex items-center gap-1 mt-1 cursor-pointer"
                   >
                     <FileText className="w-3.5 h-3.5" />
-                    View PAN Card
+                    {t("viewPan")}
                   </a>
                 </div>
               )}
               {details.gstDocPath && (
                 <div>
-                  <span className="text-slate-400 block font-medium">GST Certificate</span>
+                  <span className="text-slate-400 block font-medium">{t("label.gstDoc")}</span>
                   <a
                     href={downloadUrl("gst")}
                     target="_blank"
@@ -314,13 +324,13 @@ export default function PortalKycGate({
                     className="text-violet-600 hover:underline font-bold inline-flex items-center gap-1 mt-1 cursor-pointer"
                   >
                     <FileText className="w-3.5 h-3.5" />
-                    View GST Certificate
+                    {t("viewGst")}
                   </a>
                 </div>
               )}
               {details.msmeDocPath && (
                 <div>
-                  <span className="text-slate-400 block font-medium">MSME Certificate</span>
+                  <span className="text-slate-400 block font-medium">{t("label.msmeDoc")}</span>
                   <a
                     href={downloadUrl("msme")}
                     target="_blank"
@@ -329,13 +339,13 @@ export default function PortalKycGate({
                     className="text-violet-600 hover:underline font-bold inline-flex items-center gap-1 mt-1 cursor-pointer"
                   >
                     <FileText className="w-3.5 h-3.5" />
-                    View MSME Certificate
+                    {t("viewMsme")}
                   </a>
                 </div>
               )}
               {details.otherDocPath && (
                 <div>
-                  <span className="text-slate-400 block font-medium">Other Documents</span>
+                  <span className="text-slate-400 block font-medium">{t("label.otherDoc")}</span>
                   <a
                     href={downloadUrl("other")}
                     target="_blank"
@@ -344,7 +354,7 @@ export default function PortalKycGate({
                     className="text-violet-600 hover:underline font-bold inline-flex items-center gap-1 mt-1 cursor-pointer"
                   >
                     <FileText className="w-3.5 h-3.5" />
-                    View Other Doc
+                    {t("viewOther")}
                   </a>
                 </div>
               )}
@@ -355,30 +365,32 @@ export default function PortalKycGate({
     );
   }
 
+  const optionalDocs = [
+    { id: "pan-card-file-input", labelKey: "opt.pan" as const, hintKey: "opt.panHint" as const, slot: panDoc, setter: setPanDoc },
+    { id: "gst-cert-file-input", labelKey: "opt.gst" as const, hintKey: "opt.gstHint" as const, slot: gstDoc, setter: setGstDoc },
+    { id: "msme-file-input", labelKey: "opt.msme" as const, hintKey: "opt.msmeHint" as const, slot: msmeDoc, setter: setMsmeDoc },
+    { id: "other-file-input", labelKey: "opt.other" as const, hintKey: "opt.otherHint" as const, slot: otherDoc, setter: setOtherDoc },
+  ];
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8 shadow-sm space-y-6">
       <div className="space-y-1">
-        <h2 className="text-xl font-display font-bold text-slate-900">Complete your business details</h2>
-        <p className="text-xs text-slate-500">
-          Fill in your GST, bank, and company details, then upload one supporting document
-          (GST certificate, incorporation letter, or cancelled cheque).
-        </p>
+        <h2 className="text-xl font-display font-bold text-slate-900">{t("formTitle")}</h2>
+        <p className="text-xs text-slate-500">{t("formHint")}</p>
       </div>
 
       {vendor.kycStatus === "rejected" && (
         <div className="p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-800 text-xs flex gap-3">
           <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold text-sm">Details need a correction</p>
+            <p className="font-bold text-sm">{t("rejectedTitle")}</p>
             <p className="mt-1">
-              Note from accounts:{" "}
+              {t("rejectedNote")}{" "}
               <strong className="font-black text-rose-950">
-                &quot;{vendor.kycDetails?.remarks || "Please check your details and submit again"}&quot;
+                &quot;{vendor.kycDetails?.remarks || t("rejectedDefaultRemark")}&quot;
               </strong>
             </p>
-            <p className="text-[10px] text-rose-600 mt-1">
-              Please review the details below, correct the fields, and resubmit for verification.
-            </p>
+            <p className="text-[10px] text-rose-600 mt-1">{t("rejectedHint")}</p>
           </div>
         </div>
       )}
@@ -393,18 +405,18 @@ export default function PortalKycGate({
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
           <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-gray-100 pb-1.5">
-            1. Corporate &amp; Tax Profile
+            {t("section.corporate")}
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Beneficiary Name / Vendor Name <span className="text-red-500">*</span>
+                {t("field.beneficiary")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
-                placeholder="Corporate Name"
+                placeholder={t("placeholder.beneficiary")}
                 value={beneficiaryName}
                 onChange={(e) => setBeneficiaryName(e.target.value)}
                 className="w-full text-sm px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
@@ -413,13 +425,13 @@ export default function PortalKycGate({
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Constitution of Business <span className="text-red-500">*</span>
+                {t("field.companyType")} <span className="text-red-500">*</span>
               </label>
               <ColdverseSelect
                 value={companyType}
                 onValueChange={setCompanyType}
-                options={COMPANY_TYPES}
-                placeholder="Select company type"
+                options={companyTypes}
+                placeholder={t("placeholder.companyType")}
               />
             </div>
           </div>
@@ -427,13 +439,13 @@ export default function PortalKycGate({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                PAN Number (10 Characters) <span className="text-red-500">*</span>
+                {t("field.pan")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 maxLength={10}
-                placeholder="e.g. ABCDE1234F"
+                placeholder={t("placeholder.pan")}
                 value={panNumber}
                 onChange={(e) =>
                   setPanNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))
@@ -444,12 +456,12 @@ export default function PortalKycGate({
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                GSTIN / GST Number (15 Characters)
+                {t("field.gst")}
               </label>
               <input
                 type="text"
                 maxLength={15}
-                placeholder="e.g. 24ABCDE1234F1Z5"
+                placeholder={t("placeholder.gst")}
                 value={gstNumber}
                 onChange={(e) =>
                   setGstNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))
@@ -462,18 +474,18 @@ export default function PortalKycGate({
 
         <div className="space-y-4">
           <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-gray-100 pb-1.5">
-            2. Banking Settlement Account
+            {t("section.banking")}
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Bank Name <span className="text-red-500">*</span>
+                {t("field.bankName")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
-                placeholder="e.g. HDFC Bank, SBI"
+                placeholder={t("placeholder.bankName")}
                 value={bankName}
                 onChange={(e) => setBankName(e.target.value)}
                 className="w-full text-sm px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
@@ -482,12 +494,12 @@ export default function PortalKycGate({
 
             <div className="space-y-1.5 sm:col-span-2">
               <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Bank Account Number <span className="text-red-500">*</span>
+                {t("field.accountNumber")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
-                placeholder="Enter bank account number"
+                placeholder={t("placeholder.accountNumber")}
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
                 className="w-full text-sm px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 font-mono tracking-widest bg-gray-50/30"
@@ -498,13 +510,13 @@ export default function PortalKycGate({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                IFSC Code (11 Characters) <span className="text-red-500">*</span>
+                {t("field.ifsc")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 maxLength={11}
-                placeholder="e.g. HDFC0000123"
+                placeholder={t("placeholder.ifsc")}
                 value={ifscCode}
                 onChange={(e) =>
                   setIfscCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))
@@ -515,12 +527,12 @@ export default function PortalKycGate({
 
             <div className="space-y-1.5 sm:col-span-2">
               <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Registered Office Address <span className="text-red-500">*</span>
+                {t("field.address")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
-                placeholder="Registered corporate/billing address"
+                placeholder={t("placeholder.address")}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 className="w-full text-sm px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30"
@@ -531,12 +543,12 @@ export default function PortalKycGate({
 
         <div className="space-y-4">
           <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-gray-100 pb-1.5">
-            3. Supporting Corporate Documents
+            {t("section.docs")}
           </h3>
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-              Scanned Business Proof (PDF, JPG or PNG) <span className="text-red-500">*</span>
+              {t("field.mainProof")} <span className="text-red-500">*</span>
             </label>
             <div
               onDragOver={(e) => {
@@ -571,20 +583,21 @@ export default function PortalKycGate({
                 </div>
                 {mainDoc.fileName ? (
                   <div>
-                    <p className="text-xs font-bold text-emerald-800">File Selected: {mainDoc.fileName}</p>
-                    <p className="text-[10px] text-emerald-600 mt-0.5">
-                      Click or drag another file to replace
+                    <p className="text-xs font-bold text-emerald-800">
+                      {t("fileSelected", { fileName: mainDoc.fileName })}
                     </p>
+                    <p className="text-[10px] text-emerald-600 mt-0.5">{t("replaceFile")}</p>
                   </div>
                 ) : (
                   <div>
                     <p className="text-xs font-bold text-slate-700">
-                      Drag &amp; drop your supporting document, or{" "}
-                      <span className="text-violet-600 hover:underline">browse</span>
+                      {t.rich("dragDrop", {
+                        browse: () => (
+                          <span className="text-violet-600 hover:underline">{tCommon("browse")}</span>
+                        ),
+                      })}
                     </p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Upload a copy of PAN, GST registration Certificate, or Canceled Cheque (Max 10MB)
-                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{t("dragDropHint")}</p>
                   </div>
                 )}
               </div>
@@ -593,21 +606,14 @@ export default function PortalKycGate({
 
           <div className="space-y-3 pt-2">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-              Optional Documents (To speed up verification)
+              {t("optionalDocs")}
             </label>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(
-                [
-                  { id: "pan-card-file-input", label: "PAN Card (Optional)", hint: "Click to upload PAN Card", slot: panDoc, setter: setPanDoc },
-                  { id: "gst-cert-file-input", label: "GST Certificate (Optional)", hint: "Click to upload GST Certificate", slot: gstDoc, setter: setGstDoc },
-                  { id: "msme-file-input", label: "MSME Registration Certificate (Optional)", hint: "Click to upload MSME Certificate", slot: msmeDoc, setter: setMsmeDoc },
-                  { id: "other-file-input", label: "Any Other Documents (Optional)", hint: "Click to upload other documents", slot: otherDoc, setter: setOtherDoc },
-                ] as const
-              ).map((opt) => (
+              {optionalDocs.map((opt) => (
                 <div key={opt.id} className="space-y-1.5">
                   <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block">
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </label>
                   <div
                     onClick={() => document.getElementById(opt.id)?.click()}
@@ -631,7 +637,7 @@ export default function PortalKycGate({
                           {opt.slot.fileName}
                         </p>
                       ) : (
-                        <p className="text-[10px] text-gray-500 font-medium">{opt.hint}</p>
+                        <p className="text-[10px] text-gray-500 font-medium">{t(opt.hintKey)}</p>
                       )}
                     </div>
                   </div>
@@ -649,10 +655,10 @@ export default function PortalKycGate({
           {isSubmitting ? (
             <>
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Submitting KYC details...</span>
+              <span>{t("submitting")}</span>
             </>
           ) : (
-            <span>Submit KYC Enrollment</span>
+            <span>{t("submit")}</span>
           )}
         </button>
       </form>

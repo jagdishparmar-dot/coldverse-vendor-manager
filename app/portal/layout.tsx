@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PortalIntlProvider } from "@/src/features/portal/PortalIntlProvider";
 
 export const metadata: Metadata = {
   title: "Vendor Portal",
@@ -15,5 +16,5 @@ export default function PortalLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return <PortalIntlProvider>{children}</PortalIntlProvider>;
 }

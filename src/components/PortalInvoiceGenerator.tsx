@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertCircle,
   Download,
@@ -146,6 +147,7 @@ export default function PortalInvoiceGenerator({
   onError,
   onClose,
 }: PortalInvoiceGeneratorProps) {
+  const t = useTranslations("generator");
   const [templateId, setTemplateId] = useState<InvoiceTemplateId>("classic");
   const [companyAddress, setCompanyAddress] = useState("");
   const [supplierGst, setSupplierGst] = useState("");
@@ -178,10 +180,10 @@ export default function PortalInvoiceGenerator({
       const parts: string[] = [];
       if (vendor.kycDetails?.address) parts.push(vendor.kycDetails.address);
       else if (vendor.state) parts.push(vendor.state);
-      return parts.join(", ") || "Registered Office Address";
+      return parts.join(", ") || t("defaultAddress");
     });
     setSupplierGst((prev) => prev || vendor.gstNumber || "");
-  }, [vendor]);
+  }, [vendor, t]);
 
   useEffect(() => {
     if (categories.length > 0 && !categories.includes(category)) {
@@ -316,48 +318,48 @@ export default function PortalInvoiceGenerator({
 
   const validateForm = (): string | null => {
     if (!category || !invoiceNo.trim() || !invoiceDate) {
-      return "Please fill out invoice details (Category, Invoice No, Date).";
+      return t("error.requiredDetails");
     }
     if (!companyAddress.trim()) {
-      return "Please provide your registered / corporate address.";
+      return t("error.address");
     }
     if (!supplierGst.trim() || !isValidGstin(supplierGst)) {
-      return "Please enter a valid 15-character Supplier GSTIN.";
+      return t("error.supplierGstin");
     }
     if (availableStates.length > 0 && !state) {
-      return "Please select the operating State.";
+      return t("error.selectState");
     }
     if (filteredHubs.length > 0 && !hubId) {
-      return "Please select the regional Logistics Hub.";
+      return t("error.selectHub");
     }
     if (!(placeOfSupplyState || state)) {
-      return "Please select Place of Supply (State).";
+      return t("error.placeOfSupply");
     }
     if (!toPartyName.trim() || !toPartyAddress.trim()) {
-      return "Please complete Bill To name and address.";
+      return t("error.billTo");
     }
     if (!toPartyGstin.trim() || !isValidGstin(toPartyGstin)) {
-      return "Bill To GSTIN is missing or invalid. Select a hub with GSTIN, or enter GSTIN manually.";
+      return t("error.billToGstin");
     }
     if (toPartyMode === "auto" && hubId) {
       const hub = portalHubs.find((h) => h.id === hubId);
       const resolved = resolveBillToFromHub(hub, company, placeOfSupplyState || state);
       if (!resolved.gstin) {
-        return `No Bill To GSTIN for hub "${hub?.name || hubId}". Ask admin to set Hub GSTIN, or switch Bill To to Manual.`;
+        return t("error.hubGstin", { hub: hub?.name || hubId });
       }
     }
     if (!company?.legalName && toPartyMode === "auto") {
-      return "Company billing profile is not configured. Ask admin to set Company Billing Profile under Logistics Hubs.";
+      return t("error.companyProfile");
     }
     for (const item of items) {
       if (!item.description.trim() || item.qty <= 0 || item.rate <= 0) {
-        return "Each line needs description, quantity > 0, and rate > 0.";
+        return t("error.lineBasics");
       }
       if (!item.hsnSac.trim() || item.hsnSac.trim().length < 4) {
-        return "Each line needs a valid SAC / HSN code (min 4 digits).";
+        return t("error.hsn");
       }
       if (!item.uom.trim()) {
-        return "Each line needs a Unit of Measure (UOM).";
+        return t("error.uom");
       }
     }
     return null;
@@ -379,10 +381,10 @@ export default function PortalInvoiceGenerator({
     try {
       const blob = await generateInvoicePdfBlob(buildHtml());
       downloadPdfBlob(blob, pdfFileName());
-      onSuccess("PDF downloaded. You can also submit it from this creator.");
+      onSuccess(t("successPdfDownloaded"));
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Failed to export PDF.";
+        err instanceof Error ? err.message : t("error.exportFailed");
       setFormError(message);
       onError(message);
     } finally {
@@ -446,10 +448,10 @@ export default function PortalInvoiceGenerator({
 
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.error || "Failed to submit generated invoice.");
+        throw new Error(err.error || t("error.submitFailed"));
       }
 
-      onSuccess("GST tax invoice PDF generated & submitted successfully!");
+      onSuccess(t("successSubmitted"));
 
       setInvoiceNo("");
       setInvoiceDate("");
@@ -464,7 +466,7 @@ export default function PortalInvoiceGenerator({
       onClose?.();
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Failed to generate & submit PDF.";
+        err instanceof Error ? err.message : t("error.generateFailed");
       setFormError(message);
       onError(message);
     } finally {
@@ -485,6 +487,18 @@ export default function PortalInvoiceGenerator({
     ])
   ).map((st) => ({ value: st, label: st }));
 
+  const selectedTemplateName = t(`template.${selectedTemplate.id}.name`);
+  const selectedTemplateDescription = t(`template.${selectedTemplate.id}.description`);
+
+  const taxSplitMode =
+    gstTotals.supplyType === "intra" ? t("cgstSgst") : t("igst");
+  const supplierStateSuffix = supplierStateCode
+    ? ` (${getStateNameFromCode(supplierStateCode)} / ${supplierStateCode})`
+    : "";
+  const posCodeSuffix = placeOfSupplyStateCode
+    ? ` (${placeOfSupplyStateCode})`
+    : "";
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
@@ -493,9 +507,9 @@ export default function PortalInvoiceGenerator({
             <LayoutTemplate className="w-4 h-4 text-slate-600" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900">Optional invoice creator</p>
+            <p className="text-sm font-semibold text-slate-900">{t("title")}</p>
             <p className="text-[11px] text-slate-500 truncate">
-              Build a GST tax invoice PDF if you do not already have a file to upload.
+              {t("hint")}
             </p>
           </div>
         </div>
@@ -503,12 +517,12 @@ export default function PortalInvoiceGenerator({
           <ColdverseSelect
             value={templateId}
             onValueChange={(v) => setTemplateId(v as InvoiceTemplateId)}
-            options={INVOICE_TEMPLATES.map((t) => ({
-              value: t.id,
-              label: t.name,
+            options={INVOICE_TEMPLATES.map((tmpl) => ({
+              value: tmpl.id,
+              label: t(`template.${tmpl.id}.name`),
             }))}
           />
-          <p className="text-[10px] text-slate-400 mt-1">{selectedTemplate.description}</p>
+          <p className="text-[10px] text-slate-400 mt-1">{selectedTemplateDescription}</p>
         </div>
       </div>
 
@@ -518,28 +532,22 @@ export default function PortalInvoiceGenerator({
           className="xl:col-span-7 space-y-5"
         >
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 px-4 py-3 text-[11px] text-emerald-900">
-            Tax splits into{" "}
-            <strong>
-              {gstTotals.supplyType === "intra" ? "CGST + SGST" : "IGST"}
-            </strong>{" "}
-            from Supplier GSTIN
-            {supplierStateCode
-              ? ` (${getStateNameFromCode(supplierStateCode)} / ${supplierStateCode})`
-              : ""}{" "}
-            vs Place of Supply
-            {placeOfSupplyStateCode ? ` (${placeOfSupplyStateCode})` : ""}. Preview
-            updates live on the right; submit stores a PDF.
+            {t("taxSplitInfo", {
+              mode: taxSplitMode,
+              supplierState: supplierStateSuffix,
+              posCode: posCodeSuffix,
+            })}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider block">
-                Supplier Address <span className="text-red-500">*</span>
+                {t("supplierAddress")} <span className="text-red-500">*</span>
               </label>
               <textarea
                 required
                 rows={2}
-                placeholder="Registered address as on GST registration"
+                placeholder={t("supplierAddressPlaceholder")}
                 value={companyAddress}
                 onChange={(e) => setCompanyAddress(e.target.value)}
                 className="w-full text-sm px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 bg-gray-50/30 font-sans resize-none"
@@ -547,13 +555,13 @@ export default function PortalInvoiceGenerator({
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider block">
-                Supplier GSTIN <span className="text-red-500">*</span>
+                {t("supplierGstin")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 maxLength={15}
-                placeholder="15-character GSTIN"
+                placeholder={t("supplierGstinPlaceholder")}
                 value={supplierGst}
                 onChange={(e) => setSupplierGst(e.target.value.toUpperCase())}
                 className={`w-full text-sm px-4 py-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-violet-500/20 font-mono ${
@@ -569,10 +577,10 @@ export default function PortalInvoiceGenerator({
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
               <div>
                 <span className="text-xs font-bold text-violet-800 uppercase tracking-wider block">
-                  Bill To (Recipient)
+                  {t("billTo")}
                 </span>
                 <p className="text-[10px] text-gray-400">
-                  From Company Profile + Hub GSTIN/address, or Manual.
+                  {t("billToHint")}
                 </p>
               </div>
               <div className="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200/60">
@@ -585,7 +593,7 @@ export default function PortalInvoiceGenerator({
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  From Master
+                  {t("fromMaster")}
                 </button>
                 <button
                   type="button"
@@ -596,7 +604,7 @@ export default function PortalInvoiceGenerator({
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  Manual
+                  {t("manual")}
                 </button>
               </div>
             </div>
@@ -610,7 +618,7 @@ export default function PortalInvoiceGenerator({
                 </div>
               ) : (
                 <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                  Select state &amp; hub with GSTIN, or switch to Manual.
+                  {t("billToMissing")}
                 </p>
               )
             ) : (
@@ -618,7 +626,7 @@ export default function PortalInvoiceGenerator({
                 <input
                   type="text"
                   required
-                  placeholder="Bill To name"
+                  placeholder={t("billToNamePlaceholder")}
                   value={toPartyName}
                   onChange={(e) => setToPartyName(e.target.value)}
                   className="w-full text-sm px-3 py-2 rounded-xl border border-gray-200 bg-gray-50/30"
@@ -626,7 +634,7 @@ export default function PortalInvoiceGenerator({
                 <textarea
                   required
                   rows={1}
-                  placeholder="Bill To address"
+                  placeholder={t("billToAddressPlaceholder")}
                   value={toPartyAddress}
                   onChange={(e) => setToPartyAddress(e.target.value)}
                   className="w-full text-sm px-3 py-2 rounded-xl border border-gray-200 bg-gray-50/30 resize-none"
@@ -635,7 +643,7 @@ export default function PortalInvoiceGenerator({
                   type="text"
                   required
                   maxLength={15}
-                  placeholder="Bill To GSTIN"
+                  placeholder={t("billToGstinPlaceholder")}
                   value={toPartyGstin}
                   onChange={(e) => setToPartyGstin(e.target.value.toUpperCase())}
                   className="w-full text-sm px-3 py-2 rounded-xl border border-gray-200 bg-gray-50/30 font-mono"
@@ -647,7 +655,7 @@ export default function PortalInvoiceGenerator({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                Category *
+                {t("category")}
               </label>
               <ColdverseSelect
                 value={category}
@@ -668,7 +676,7 @@ export default function PortalInvoiceGenerator({
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                Invoice No *
+                {t("invoiceNo")}
               </label>
               <input
                 type="text"
@@ -680,19 +688,19 @@ export default function PortalInvoiceGenerator({
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                Invoice Date *
+                {t("invoiceDate")}
               </label>
               <ColdverseDateField value={invoiceDate} onValueChange={setInvoiceDate} />
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                Place of Supply *
+                {t("placeOfSupply")}
               </label>
               <ColdverseSelect
                 value={placeOfSupplyState}
                 onValueChange={setPlaceOfSupplyState}
                 options={posStateOptions}
-                placeholder="Select state"
+                placeholder={t("selectState")}
               />
             </div>
           </div>
@@ -700,7 +708,7 @@ export default function PortalInvoiceGenerator({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                Operating State
+                {t("operatingState")}
               </label>
               <ColdverseSelect
                 value={state}
@@ -709,21 +717,23 @@ export default function PortalInvoiceGenerator({
                   setHubId("");
                 }}
                 options={availableStates.map((s) => ({ value: s, label: s }))}
-                placeholder="Select state"
+                placeholder={t("selectState")}
               />
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                Logistics Hub
+                {t("hub")}
               </label>
               <ColdverseSelect
                 value={hubId}
                 onValueChange={setHubId}
                 options={filteredHubs.map((h) => ({
                   value: h.id,
-                  label: `${h.name} (${h.code})${h.gstin ? "" : " · no GSTIN"}`,
+                  label: h.gstin
+                    ? `${h.name} (${h.code})`
+                    : t("hubNoGstin", { name: h.name, code: h.code }),
                 }))}
-                placeholder="Select hub"
+                placeholder={t("selectHub")}
               />
             </div>
           </div>
@@ -735,13 +745,13 @@ export default function PortalInvoiceGenerator({
               onChange={(e) => setReverseCharge(e.target.checked)}
               className="rounded border-gray-300"
             />
-            Reverse Charge Mechanism (RCM) applicable
+            {t("rcm")}
           </label>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Line Items
+                {t("lineItems")}
               </h4>
               <button
                 type="button"
@@ -751,7 +761,7 @@ export default function PortalInvoiceGenerator({
                 className="text-[11px] font-semibold text-violet-700 hover:text-violet-800 flex items-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                Add line
+                {t("addLine")}
               </button>
             </div>
 
@@ -771,7 +781,7 @@ export default function PortalInvoiceGenerator({
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="Description of service"
+                        placeholder={t("descriptionPlaceholder")}
                         value={item.description}
                         onChange={(e) =>
                           updateItem(item.id, { description: e.target.value })
@@ -805,7 +815,9 @@ export default function PortalInvoiceGenerator({
                         onValueChange={(uom) => updateItem(item.id, { uom })}
                         options={UOM_OPTIONS.map((u) => ({
                           value: u.value,
-                          label: u.label,
+                          label: t(
+                            `uom.${({ DAY: "DAYS", TRP: "TRIP", SQF: "SFT" } as Record<string, string>)[u.value] ?? u.value}`
+                          ),
                         }))}
                       />
                       <input
@@ -817,7 +829,7 @@ export default function PortalInvoiceGenerator({
                           updateItem(item.id, { qty: Number(e.target.value) || 0 })
                         }
                         className="text-xs px-2 py-2 rounded-lg border border-gray-200"
-                        placeholder="Qty"
+                        placeholder={t("qty")}
                       />
                       <input
                         type="number"
@@ -828,7 +840,7 @@ export default function PortalInvoiceGenerator({
                           updateItem(item.id, { rate: Number(e.target.value) || 0 })
                         }
                         className="text-xs px-2 py-2 rounded-lg border border-gray-200"
-                        placeholder="Rate"
+                        placeholder={t("rate")}
                       />
                       <ColdverseSelect
                         value={String(item.taxRate)}
@@ -842,10 +854,17 @@ export default function PortalInvoiceGenerator({
                       />
                     </div>
                     <p className="text-[10px] text-slate-400 text-right font-mono">
-                      Line ₹{breakdown.lineTotal.toFixed(2)} ·{" "}
                       {breakdown.supplyType === "intra"
-                        ? `CGST+SGST ₹${(breakdown.cgstAmount + breakdown.sgstAmount).toFixed(2)}`
-                        : `IGST ₹${breakdown.igstAmount.toFixed(2)}`}
+                        ? t("lineTotalIntra", {
+                            total: breakdown.lineTotal.toFixed(2),
+                            tax: (
+                              breakdown.cgstAmount + breakdown.sgstAmount
+                            ).toFixed(2),
+                          })
+                        : t("lineTotalInter", {
+                            total: breakdown.lineTotal.toFixed(2),
+                            tax: breakdown.igstAmount.toFixed(2),
+                          })}
                     </p>
                   </div>
                 );
@@ -856,7 +875,7 @@ export default function PortalInvoiceGenerator({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <textarea
               rows={2}
-              placeholder="Remarks (optional)"
+              placeholder={t("remarksPlaceholder")}
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
               className="w-full text-sm px-3 py-2 rounded-xl border border-gray-200 resize-none"
@@ -864,7 +883,7 @@ export default function PortalInvoiceGenerator({
             <div className="grid grid-cols-1 gap-2">
               <input
                 type="text"
-                placeholder="Hard copy submitted to (optional)"
+                placeholder={t("hardCopyToPlaceholder")}
                 value={hardCopySubmittedTo}
                 onChange={(e) => setHardCopySubmittedTo(e.target.value)}
                 className="w-full text-sm px-3 py-2 rounded-xl border border-gray-200"
@@ -872,14 +891,14 @@ export default function PortalInvoiceGenerator({
               <ColdverseDateField
                 value={hardCopySubmissionDate}
                 onValueChange={setHardCopySubmissionDate}
-                placeholder="Hard copy date"
+                placeholder={t("hardCopyDatePlaceholder")}
               />
             </div>
           </div>
 
           <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-1.5 text-xs">
             <div className="flex justify-between text-gray-500">
-              <span>Taxable</span>
+              <span>{t("totals.taxable")}</span>
               <span className="font-mono font-semibold">
                 ₹{gstTotals.taxableAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </span>
@@ -887,13 +906,13 @@ export default function PortalInvoiceGenerator({
             {gstTotals.supplyType === "intra" ? (
               <>
                 <div className="flex justify-between text-gray-500">
-                  <span>CGST</span>
+                  <span>{t("totals.cgst")}</span>
                   <span className="font-mono">
                     ₹{gstTotals.cgstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-500">
-                  <span>SGST</span>
+                  <span>{t("totals.sgst")}</span>
                   <span className="font-mono">
                     ₹{gstTotals.sgstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </span>
@@ -901,14 +920,14 @@ export default function PortalInvoiceGenerator({
               </>
             ) : (
               <div className="flex justify-between text-gray-500">
-                <span>IGST</span>
+                <span>{t("totals.igst")}</span>
                 <span className="font-mono">
                   ₹{gstTotals.igstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </span>
               </div>
             )}
             <div className="flex justify-between items-center border-t border-gray-200 pt-2 text-sm">
-              <span className="font-bold">Grand Total</span>
+              <span className="font-bold">{t("totals.grandTotal")}</span>
               <span className="font-mono font-black text-violet-600">
                 ₹{gstTotals.grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </span>
@@ -933,12 +952,12 @@ export default function PortalInvoiceGenerator({
               {isExportingPdf ? (
                 <>
                   <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-                  Preparing PDF...
+                  {t("preparingPdf")}
                 </>
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  Export PDF
+                  {t("exportPdf")}
                 </>
               )}
             </button>
@@ -950,12 +969,12 @@ export default function PortalInvoiceGenerator({
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Generating PDF...
+                  {t("generatingPdf")}
                 </>
               ) : (
                 <>
                   <FileCheck className="w-4 h-4" />
-                  Generate PDF &amp; Submit
+                  {t("submit")}
                 </>
               )}
             </button>
@@ -968,10 +987,10 @@ export default function PortalInvoiceGenerator({
               <div className="min-w-0">
                 <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 text-violet-600" />
-                  Live template preview
+                  {t("previewTitle")}
                 </p>
                 <p className="text-[10px] text-slate-500 truncate">
-                  {selectedTemplate.name} · changes update instantly
+                  {t("previewSubtitle", { templateName: selectedTemplateName })}
                 </p>
               </div>
               <span
@@ -982,7 +1001,7 @@ export default function PortalInvoiceGenerator({
             </div>
             <div className="h-[min(72vh,720px)] bg-slate-200/60 p-3">
               <iframe
-                title="Invoice template preview"
+                title={t("previewIframeTitle")}
                 srcDoc={livePreviewHtml}
                 className="w-full h-full rounded-lg border border-slate-300 bg-white shadow-sm"
                 sandbox="allow-same-origin"
